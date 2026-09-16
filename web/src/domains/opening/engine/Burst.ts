@@ -199,20 +199,26 @@ export class Burst {
     this.points.material.uniforms.uPixelRatio!.value = dpr
   }
 
-  /** Liga os raios (fade 450), dispara anel e partículas. */
-  fire(tier: string, now: number, tweens: Tweens, rng: () => number = Math.random): void {
+  /** Anel sempre; raios (fade 450) e partículas só sem `reduced` (§8). */
+  fire(
+    tier: string,
+    now: number,
+    tweens: Tweens,
+    reduced = false,
+    rng: () => number = Math.random,
+  ): void {
     const gold = GOLD_TIERS.has(tier)
     const color = gold ? this.gold : this.rose
-    ;(this.rays.material.uniforms.uColor!.value as Vector3).set(color[0], color[1], color[2])
-    this.rays.visible = true
-    this.raysOn = true
-    tweens.to(
-      this.rays.material.uniforms.uOpacity as { value: number },
-      { value: RAYS_OPACITY },
-      {
-        duration: MS.raysFade,
-      },
-    )
+    if (!reduced) {
+      ;(this.rays.material.uniforms.uColor!.value as Vector3).set(color[0], color[1], color[2])
+      this.rays.visible = true
+      this.raysOn = true
+      tweens.to(
+        this.rays.material.uniforms.uOpacity as { value: number },
+        { value: RAYS_OPACITY },
+        { duration: MS.raysFade },
+      )
+    }
 
     this.ring.visible = true
     this.ring.material.opacity = RING_OPACITY
@@ -237,15 +243,17 @@ export class Burst {
       },
     )
 
-    fillBurst(this.attrs, burstCount(tier), gold ? this.goldPalette : this.rosePalette, rng)
-    const geometry = this.points.geometry
-    for (const name of ['aAngle', 'aDist', 'aScale', 'aDelay', 'aDur', 'aColor', 'aStar']) {
-      geometry.getAttribute(name).needsUpdate = true
+    if (!reduced) {
+      fillBurst(this.attrs, burstCount(tier), gold ? this.goldPalette : this.rosePalette, rng)
+      const geometry = this.points.geometry
+      for (const name of ['aAngle', 'aDist', 'aScale', 'aDelay', 'aDur', 'aColor', 'aStar']) {
+        geometry.getAttribute(name).needsUpdate = true
+      }
+      this.points.material.uniforms.uT0!.value = now
+      this.points.material.uniforms.uTime!.value = now
+      this.points.visible = true
+      this.pointsUntil = now + MS.burstMax
     }
-    this.points.material.uniforms.uT0!.value = now
-    this.points.material.uniforms.uTime!.value = now
-    this.points.visible = true
-    this.pointsUntil = now + MS.burstMax
   }
 
   /** Raios desligam no descarte (fade 450). */

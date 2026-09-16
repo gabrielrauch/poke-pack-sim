@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
+import { prefersReducedMotion } from '../../../shared/lib/motion'
 import type { ThemeColors } from '../../../shared/lib/theme'
 import type { PackArt } from '../../catalog/model'
 import type { PackCard } from '../../packs/model'
@@ -46,7 +47,9 @@ export function useOpeningScene({ session, pack, art, colors, callbacks }: Openi
       onNudge: () => callbacksRef.current.onNudge?.(),
       vibrate: (p) => callbacksRef.current.vibrate?.(p),
     }
-    const scene = new OpeningScene(container, colorsRef.current, forward)
+    const scene = new OpeningScene(container, colorsRef.current, forward, {
+      reducedMotion: prefersReducedMotion(),
+    })
     sceneRef.current = scene
     // Só em dev: deixa o /lab inspecionar a cena pelo console (estado, stats, tweens).
     if (import.meta.env.DEV) (window as unknown as { __scene?: OpeningScene }).__scene = scene

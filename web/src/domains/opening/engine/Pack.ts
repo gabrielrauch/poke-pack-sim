@@ -91,13 +91,19 @@ export class Pack {
     this.strip.position.y = this.stripY
   }
 
-  /** Ociosos do §8.3: bob, varredura, guia (some enquanto corta) e tremor da tira durante o corte. */
-  update(now: number, tearing: boolean): void {
-    this.bob.position.y = 7 * (0.5 - 0.5 * Math.cos((now / MS.bob) * Math.PI * 2))
-    this.sweep.offset.x = 0.55 - 1.1 * sweepPhase(now)
-    const g = guidePhase(now)
-    this.guide.offset.x = 0.7 - 1.4 * g.x
-    this.stripMaterial.emissiveIntensity = tearing ? 0 : g.opacity * 0.4
+  /** Ociosos do §8.3 (bob, varredura, guia) só com `idle`; o tremor da tira durante o corte é feedback e fica sempre. */
+  update(now: number, tearing: boolean, idle = true): void {
+    if (idle) {
+      this.bob.position.y = 7 * (0.5 - 0.5 * Math.cos((now / MS.bob) * Math.PI * 2))
+      this.sweep.offset.x = 0.55 - 1.1 * sweepPhase(now)
+      const g = guidePhase(now)
+      this.guide.offset.x = 0.7 - 1.4 * g.x
+      this.stripMaterial.emissiveIntensity = tearing ? 0 : g.opacity * 0.4
+    } else {
+      this.bob.position.y = 0
+      this.sweep.offset.x = 0.55
+      this.stripMaterial.emissiveIntensity = 0
+    }
     this.shake.position.x = tearing ? 0.7 * Math.sin(now * 0.0628) : 0
     this.shake.position.y = tearing ? 0.5 * Math.cos(now * 0.0817) : 0
   }

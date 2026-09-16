@@ -67,6 +67,10 @@ export type SceneStats = {
   dpr: number
 }
 export type Rect = { left: number; top: number; width: number; height: number }
+export type SceneOptions = {
+  /** §8 com `prefers-reduced-motion`: durações ×0,5, sem lascas/partículas/raios, flip vira fade, ociosos desligados. */
+  reducedMotion?: boolean
+}
 
 /** 1 unidade = 1 px CSS em z=0; mesma perspectiva do protótipo (`perspective: 1000px`). */
 const CAMERA_Z = 1000
@@ -80,6 +84,7 @@ const rad = (deg: number) => (deg * Math.PI) / 180
 
 export class OpeningScene {
   state: State = 'summary'
+  readonly reduced: boolean
   private readonly canvas: HTMLCanvasElement
   private readonly renderer: WebGLRenderer
   private readonly scene = new Scene()
@@ -136,7 +141,10 @@ export class OpeningScene {
     private readonly container: HTMLElement,
     colors: SceneColors,
     private readonly callbacks: SceneCallbacks,
+    options: SceneOptions = {},
   ) {
+    this.reduced = options.reducedMotion === true
+    this.tweens.timeScale = this.reduced ? 0.5 : 1
     this.canvas = document.createElement('canvas')
     this.canvas.style.cssText = 'display:block;width:100%;height:100%'
     container.appendChild(this.canvas)
@@ -366,7 +374,7 @@ export class OpeningScene {
     this.tearLine.show(r.tear.a, r.tear.b, r.tear.dir)
     if (r.milestone) {
       this.callbacks.vibrate?.(5)
-      this.tearLine.spawnFlecks(r.tear.dir < 0 ? r.tear.a : r.tear.b, 2, false)
+      if (!this.reduced) this.tearLine.spawnFlecks(r.tear.dir < 0 ? r.tear.a : r.tear.b, 2, false)
     }
     if (r.complete) this.completeTear()
     this.invalidate()
@@ -476,7 +484,7 @@ export class OpeningScene {
     const packH = pack.height
     this.callbacks.vibrate?.([16, 30, 28])
     this.tearLine.playFlash(tw)
-    this.tearLine.spawnFlecks(0.5, 26, true)
+    if (!this.reduced) this.tearLine.spawnFlecks(0.5, 26, true)
     tw.keyframes(
       pack.bodyPivot.scale,
       RECOIL.map((k) => ({ at: k.at, to: { x: k.s, y: k.s } })),
@@ -575,11 +583,13 @@ export class OpeningScene {
       { r: CHARGE.backBoost, g: CHARGE.backBoost, b: CHARGE.backBoost },
       charge,
     )
-    tw.keyframes(
-      card.group.position,
-      CHARGE_SHAKE.map((k) => ({ at: k.at, to: { x: k.x } })),
-      charge,
-    )
+    if (!this.reduced) {
+      tw.keyframes(
+        card.group.position,
+        CHARGE_SHAKE.map((k) => ({ at: k.at, to: { x: k.x } })),
+        charge,
+      )
+    }
     tw.to(card.group.scale, { x: CHARGE.scale, y: CHARGE.scale }, charge)
     this.callbacks.vibrate?.([10, 70, 10, 70, 10, 70, 40])
     tw.after(MS.suspense, () => {
@@ -606,22 +616,44 @@ export class OpeningScene {
     card.group.rotation.set(0, 0, 0)
     card.group.scale.set(1, 1, 1)
     card.setBackTint(1)
-    const frames = flipFrames()
     const ms = plan.flipMs
-    tw.keyframes(card.group.position, frames.position, { duration: ms, easing: EASE.flip })
-    tw.keyframes(card.group.rotation, frames.rotation, { duration: ms, easing: EASE.flip })
-    tw.keyframes(card.group.scale, frames.scale, {
-      duration: ms,
-      easing: EASE.flip,
-      onComplete: () => {
-        this.undim()
-        this.dispatch('revealed')
-        this.callbacks.onReveal?.(plan.index)
-      },
-    })
+    const done = () => {
+      this.undim()
+      this.dispatch('revealed')
+      this.callbacks.onReveal?.(plan.index)
+    }
+    if (this.reduced) {
+      // §8: o verso some e a face aparece no mesmo lugar, sem giro. A face "aparece" no mesmo instante do flip (45%).
+      tw.to(
+        card.back.material,
+        { opacity: 0 },
+        {
+          duration: ms * FLIP_FACE_AT,
+          easing: EASE.easeIn,
+          onComplete: () => {
+            card.group.rotation.y = Math.PI
+            card.opacity.value = 0
+            tw.to(
+              card.opacity,
+              { value: 1 },
+              { duration: ms * (1 - FLIP_FACE_AT), easing: EASE.easeOut, onComplete: done },
+            )
+          },
+        },
+      )
+    } else {
+      const frames = flipFrames()
+      tw.keyframes(card.group.position, frames.position, { duration: ms, easing: EASE.flip })
+      tw.keyframes(card.group.rotation, frames.rotation, { duration: ms, easing: EASE.flip })
+      tw.keyframes(card.group.scale, frames.scale, {
+        duration: ms,
+        easing: EASE.flip,
+        onComplete: done,
+      })
+    }
     tw.after(ms * FLIP_FACE_AT, () => {
       if (plan.hit) {
-        this.burst.fire(card.card.tier, this.now, tw)
+        this.burst.fire(card.card.tier, this.now, tw, this.reduced)
         this.callbacks.vibrate?.([20, 40, 70])
       } else if (plan.buzz) {
         this.callbacks.vibrate?.(8)
@@ -731,8 +763,10 @@ export class OpeningScene {
     this.applyTilt()
     let idle = false
     if (this.pack?.root.visible) {
-      this.pack.update(now, this.state === 'tearing')
-      idle = true
+      const tearing = this.state === 'tearing'
+      this.pack.update(now, tearing, !this.reduced)
+      // Sem ociosos, o loop só fica ligado enquanto a tira treme (corte).
+      idle = !this.reduced || tearing
     }
     if (this.tearLine.update(dt)) idle = true
     if (this.burst.update(now)) idle = true
