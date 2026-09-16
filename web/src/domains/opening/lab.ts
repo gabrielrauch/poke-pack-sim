@@ -1,6 +1,5 @@
-import { proxiedImage, type Tier } from '../catalog/model'
+import { proxiedImage, type PackArt, type Tier } from '../catalog/model'
 import type { PackCard } from '../packs/model'
-import type { PackArt } from './engine/OpeningScene'
 
 const IMG = 'https://assets.tcgdex.net/pt/sv/sv03.5'
 

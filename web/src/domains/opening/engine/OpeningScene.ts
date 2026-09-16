@@ -13,8 +13,10 @@ import {
 } from 'three'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { EASE, MS } from '../../../shared/lib/motion'
-import { cardImage } from '../../catalog/model'
+import { cardImage, type PackArt } from '../../catalog/model'
 import type { PackCard } from '../../packs/model'
+
+export type { PackArt }
 import { Burst } from './Burst'
 import { Card, createCardAssets, type CardAssets } from './Card'
 import { Pack, PACK_ASPECT } from './Pack'
@@ -64,7 +66,6 @@ export type SceneStats = {
   triangles: number
   dpr: number
 }
-export type PackArt = { name: string; subtitle: string; logo: string | null }
 export type Rect = { left: number; top: number; width: number; height: number }
 
 /** 1 unidade = 1 px CSS em z=0; mesma perspectiva do protótipo (`perspective: 1000px`). */
