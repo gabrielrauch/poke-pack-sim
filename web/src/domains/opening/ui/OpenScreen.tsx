@@ -81,17 +81,19 @@ export default function OpenScreen() {
 function StatusOverlay({ text, onRetry }: { text: FailureText; onRetry: () => void }) {
   return (
     <div className={s.status} role="alert">
-      <b>{text.title}</b>
-      <p>{text.detail}</p>
-      {text.retry ? (
-        <button type="button" className={s.btn} onClick={onRetry}>
-          Tentar de novo
-        </button>
-      ) : (
-        <a className={s.btn} href="/">
-          Voltar ao início
-        </a>
-      )}
+      <div className={s.statusCard}>
+        <b>{text.title}</b>
+        <p>{text.detail}</p>
+        {text.retry ? (
+          <button type="button" className={s.btn} onClick={onRetry}>
+            Tentar de novo
+          </button>
+        ) : (
+          <a className={s.btn} href="/">
+            Voltar ao início
+          </a>
+        )}
+      </div>
     </div>
   )
 }
