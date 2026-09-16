@@ -6,3 +6,5 @@ minimumReleaseAgeExclude:
   - hono@4.13.8
   - miniflare@5.20260915.0-alpha
   - wrangler@4.132.0
+  - '@tanstack/query-core@5.103.1'
+  - '@tanstack/react-query@5.103.1'
