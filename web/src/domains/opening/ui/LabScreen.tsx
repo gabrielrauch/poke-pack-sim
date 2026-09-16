@@ -43,7 +43,13 @@ export default function LabScreen() {
     }),
     [],
   )
-  const { containerRef, sceneRef } = useOpeningScene({ pack, art: LAB_ART, colors, callbacks })
+  const { containerRef, sceneRef } = useOpeningScene({
+    session: packNo,
+    pack,
+    art: LAB_ART,
+    colors,
+    callbacks,
+  })
   useTilt(sceneRef, containerRef)
   useTear(sceneRef, containerRef)
 

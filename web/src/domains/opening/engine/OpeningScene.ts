@@ -102,6 +102,12 @@ export class OpeningScene {
   private revealed = 0
   private tear: Tear | null = null
   private generation = 0
+  /** `present()` em andamento; `load()` espera por ele antes de montar a pilha. */
+  private presenting: Promise<void> = Promise.resolve()
+  /** Cartas carregadas e pilha montada. */
+  private ready = false
+  /** O corte terminou antes das cartas chegarem: `load()` dispara a abertura com esta direção. */
+  private pendingOpen: -1 | 1 | null = null
   private disposed = false
   private w = 0
   private h = 0
@@ -197,34 +203,70 @@ export class OpeningScene {
     this.resize()
   }
 
-  /** Carrega as 5 texturas, monta pilha e pacote e entra em `pack` com a animação de entrada. */
-  async run(pack: PackCard[], art: PackArt): Promise<void> {
+  /**
+   * Zera a cena e mostra o pacote fechado com a entrada do §8.10. As cartas chegam depois por
+   * `load()`: o pacote já está na tela enquanto o `POST /api/packs` roda (§1.3, a animação cobre a latência).
+   */
+  present(art: PackArt): Promise<void> {
     const gen = ++this.generation
     this.tweens.cancelAll()
     this.clearCards()
     this.revealed = 0
+    this.ready = false
+    this.pendingOpen = null
     this.tear = null
     this.burst.reset()
     this.tearLine.reset()
     this.dim.visible = false
     this.dim.material.opacity = 0
     this.focus.rotation.set(0, 0, 0)
+    this.stack.visible = false
+    this.presenting = this.buildPack(art, gen).then(() => {
+      if (gen !== this.generation || this.disposed || !this.pack) return
+      const pack = this.pack
+      pack.reset()
+      this.renderer.compile(this.scene, this.camera)
+      this.setState('pack')
+      const root = pack.root
+      root.position.y = PACK_ENTER.y
+      root.scale.setScalar(PACK_ENTER.scale)
+      pack.bodyMaterial.opacity = 0
+      pack.stripMaterial.opacity = 0
+      const enter = { duration: MS.packEnter, easing: EASE.settle }
+      this.tweens.to(root.position, { y: 0 }, enter)
+      this.tweens.to(root.scale, { x: 1, y: 1, z: 1 }, enter)
+      this.tweens.to(pack.bodyMaterial, { opacity: 1 }, enter)
+      this.tweens.to(pack.stripMaterial, { opacity: 1 }, enter)
+      this.invalidate()
+    })
+    return this.presenting
+  }
 
-    if (!this.pack || this.packName !== art.name) {
-      await document.fonts.load("700 40px 'Fredoka'").catch(() => [])
-      const logo = await loadImage(art.logo)
-      if (gen !== this.generation || this.disposed) return
-      if (this.pack) {
-        this.stage.remove(this.pack.root)
-        this.pack.dispose()
-      }
-      this.pack = new Pack(this.unitPlane, { name: art.name, subtitle: art.subtitle, logo })
-      this.packName = art.name
-      this.pack.tilt.add(this.tearLine.group)
-      this.stage.add(this.pack.root)
-      this.pack.layout(this.packW)
+  /** Reaproveita o pacote se a arte é a mesma; senão desenha um novo (fonte e logo carregam antes). */
+  private async buildPack(art: PackArt, gen: number): Promise<void> {
+    if (this.pack && this.packName === art.name) return
+    await document.fonts.load("700 40px 'Fredoka'").catch(() => [])
+    const logo = await loadImage(art.logo)
+    if (gen !== this.generation || this.disposed) return
+    if (this.pack) {
+      this.stage.remove(this.pack.root)
+      this.pack.dispose()
     }
+    this.pack = new Pack(this.unitPlane, { name: art.name, subtitle: art.subtitle, logo })
+    this.packName = art.name
+    this.pack.tilt.add(this.tearLine.group)
+    this.stage.add(this.pack.root)
+    this.pack.layout(this.packW)
+  }
 
+  /**
+   * Carrega as 5 texturas e monta a pilha atrás do pacote apresentado. Se o corte terminou antes
+   * de as cartas chegarem (`pendingOpen`), a abertura do §8.5 começa aqui.
+   */
+  async load(pack: PackCard[]): Promise<void> {
+    const gen = this.generation
+    await this.presenting
+    if (gen !== this.generation || this.disposed || !this.pack) return
     const maxAnisotropy = this.renderer.capabilities.getMaxAnisotropy()
     const textures = await loadCardTextures(
       pack.map((c) => cardImage(c.img, 'high')),
@@ -235,6 +277,7 @@ export class OpeningScene {
       for (const t of textures) t.dispose()
       return
     }
+    this.clearCards()
     this.cards = pack.map((c, i) => {
       const card = new Card(this.unitPlane, c, textures[i]!, this.cardAssets)
       card.layout(this.cardW)
@@ -247,24 +290,17 @@ export class OpeningScene {
     this.plan = revealPlan(pack)
     this.stack.position.y = 0
     this.stack.scale.setScalar(STACK.hiddenScale)
-    this.pack.reset()
     for (const t of textures) this.renderer.initTexture(t)
+    // Compila com a pilha visível e esconde de novo até subir pela boca (§8.5, t=140).
     this.stack.visible = true
     this.renderer.compile(this.scene, this.camera)
-    // Escondida até subir pela boca (§8.5, t=140): atrás do corpo ela ainda apareceria nas bordas com o tilt.
     this.stack.visible = false
-
-    this.setState('pack')
-    const root = this.pack.root
-    root.position.y = PACK_ENTER.y
-    root.scale.setScalar(PACK_ENTER.scale)
-    this.pack.bodyMaterial.opacity = 0
-    this.pack.stripMaterial.opacity = 0
-    const enter = { duration: MS.packEnter, easing: EASE.settle }
-    this.tweens.to(root.position, { y: 0 }, enter)
-    this.tweens.to(root.scale, { x: 1, y: 1, z: 1 }, enter)
-    this.tweens.to(this.pack.bodyMaterial, { opacity: 1 }, enter)
-    this.tweens.to(this.pack.stripMaterial, { opacity: 1 }, enter)
+    this.ready = true
+    if (this.pendingOpen !== null) {
+      const dir = this.pendingOpen
+      this.pendingOpen = null
+      this.playOpening(dir)
+    }
     this.invalidate()
   }
 
@@ -356,8 +392,10 @@ export class OpeningScene {
     if (!this.pack || !this.dispatch('tearComplete')) return
     this.tear = null
     this.pack.setHeld(false, this.tweens)
-    this.callbacks.vibrate?.([16, 30, 28])
-    this.playOpening(dir)
+    this.tearLine.setDone(this.tweens)
+    if (this.ready) this.playOpening(dir)
+    else this.pendingOpen = dir // as cartas ainda não chegaram: a abertura começa no fim de load()
+    this.invalidate()
   }
 
   /** Um swipe/toque = uma carta (§8.6). */
@@ -436,7 +474,7 @@ export class OpeningScene {
     const pack = this.pack!
     const tw = this.tweens
     const packH = pack.height
-    this.tearLine.setDone(tw)
+    this.callbacks.vibrate?.([16, 30, 28])
     this.tearLine.playFlash(tw)
     this.tearLine.spawnFlecks(0.5, 26, true)
     tw.keyframes(
