@@ -203,6 +203,12 @@ importers:
       vitest:
         specifier: 4.1.11
         version: 4.1.11(vite@8.3.0(esbuild@0.28.1)(terser@5.51.2))
+      workbox-build:
+        specifier: ^7.4.1
+        version: 7.4.1(supports-color@10.2.2)
+      workbox-window:
+        specifier: ^7.4.1
+        version: 7.4.1
       wrangler:
         specifier: 4.132.0
         version: 4.132.0
