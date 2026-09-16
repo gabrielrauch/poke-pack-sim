@@ -96,6 +96,14 @@ describe('pickWeighted', () => {
     ).toThrow(RangeError)
   })
 
+  it('rejects weights whose sum overflows to Infinity', () => {
+    const huge = [
+      ['a', Number.MAX_VALUE],
+      ['b', Number.MAX_VALUE],
+    ] as const
+    expect(() => pickWeighted(rngAt(0.999), huge)).toThrow(RangeError)
+  })
+
   it('draws proportionally over many samples', () => {
     const rng = createRng([1, 1, 2, 3])
     let b = 0

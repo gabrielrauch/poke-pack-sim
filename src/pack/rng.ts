@@ -54,6 +54,7 @@ export function pickWeighted<T>(rng: Rng, entries: ReadonlyArray<readonly [T, nu
     }
     total += weight
   }
+  if (!Number.isFinite(total)) throw new RangeError('pickWeighted weights overflow to Infinity')
   const last = entries[entries.length - 1]![0]
   if (entries.length === 1) return last
   const target = rng.nextFloat() * total
