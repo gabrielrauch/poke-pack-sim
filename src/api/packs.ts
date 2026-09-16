@@ -6,7 +6,7 @@ import { buildPack, missingTiers, recipeForSet, seedFromBytes } from '../pack'
 import { ALLOWANCE } from './allowance'
 import { requireUser } from './auth'
 import { SET_ID, type AppDeps, type AppEnv } from './env'
-import { localDate, nextLocalMidnight } from './time'
+import { nextRefillAt, refillPeriod } from './time'
 
 /** ULID, UUID ou qualquer id gerado no cliente. */
 const PACK_ID = /^[A-Za-z0-9_-]{8,64}$/
@@ -58,7 +58,6 @@ export function packRoutes({ provider, now = () => new Date() }: AppDeps) {
     if (!body) return c.json({ error: 'BAD_REQUEST' }, 400)
     const db = c.env.DB
     const at = now()
-    const tz = c.env.TIMEZONE
 
     // Idempotência: pack_id repetido devolve o pacote gravado, sem cobrar de novo.
     const existing = await findPack(db, body.pack_id)
@@ -69,10 +68,15 @@ export function packRoutes({ provider, now = () => new Date() }: AppDeps) {
       return c.json(packResponse(existing, c.get('user')))
     }
 
-    const user = await persistRefill(db, c.get('user'), localDate(at, tz), ALLOWANCE)
+    const user = await persistRefill(
+      db,
+      c.get('user'),
+      refillPeriod(at, ALLOWANCE.hours),
+      ALLOWANCE,
+    )
     if (user.packs_available <= 0) {
       return c.json(
-        { error: 'NO_PACKS', next_refill_at: nextLocalMidnight(at, tz).toISOString() },
+        { error: 'NO_PACKS', next_refill_at: nextRefillAt(at, ALLOWANCE.hours).toISOString() },
         409,
       )
     }
@@ -126,7 +130,7 @@ export function packRoutes({ provider, now = () => new Date() }: AppDeps) {
       // Corrida com outro pack_id: o CHECK do banco negou a última unidade de cota.
       if (/CHECK constraint failed/.test(message)) {
         return c.json(
-          { error: 'NO_PACKS', next_refill_at: nextLocalMidnight(at, tz).toISOString() },
+          { error: 'NO_PACKS', next_refill_at: nextRefillAt(at, ALLOWANCE.hours).toISOString() },
           409,
         )
       }

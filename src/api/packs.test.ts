@@ -50,7 +50,7 @@ describe('POST /api/packs', () => {
   })
 
   it('opens a pack, persists it and decrements the quota', async () => {
-    await seedUser({ packs_available: 2, last_refill_date: '2026-09-16' })
+    await seedUser({ packs_available: 2, last_refill_date: '2026-09-16T12:00:00.000Z' })
     const res = await open('pack-0001')
     expect(res.status).toBe(200)
     const pack = (await res.json()) as PackResponse
@@ -102,7 +102,7 @@ describe('POST /api/packs', () => {
   })
 
   it('is idempotent by pack_id: same result, no second charge', async () => {
-    await seedUser({ packs_available: 2, last_refill_date: '2026-09-16' })
+    await seedUser({ packs_available: 2, last_refill_date: '2026-09-16T12:00:00.000Z' })
     const first = (await (await open('pack-0002')).json()) as PackResponse
     const second = (await (await open('pack-0002')).json()) as PackResponse
     expect(second).toEqual(first)
@@ -111,7 +111,7 @@ describe('POST /api/packs', () => {
   })
 
   it('is deterministic by pack_id across users and marks repeats as not new', async () => {
-    await seedUser({ packs_available: 6, last_refill_date: '2026-09-16' })
+    await seedUser({ packs_available: 6, last_refill_date: '2026-09-16T12:00:00.000Z' })
     const a = (await (await open('pack-0003')).json()) as PackResponse
     const b = (await (await open('pack-0004')).json()) as PackResponse
     expect(a.cards.map((c) => c.n)).not.toEqual(b.cards.map((c) => c.n))
@@ -122,7 +122,7 @@ describe('POST /api/packs', () => {
   })
 
   it('rejects the same pack_id with another set', async () => {
-    await seedUser({ packs_available: 2, last_refill_date: '2026-09-16' })
+    await seedUser({ packs_available: 2, last_refill_date: '2026-09-16T12:00:00.000Z' })
     await open('pack-0005')
     const res = await open('pack-0005', 'sv01')
     expect(res.status).toBe(409)
@@ -130,32 +130,32 @@ describe('POST /api/packs', () => {
   })
 
   it('refuses without quota and tells when it refills', async () => {
-    await seedUser({ packs_available: 0, last_refill_date: '2026-09-16' })
+    await seedUser({ packs_available: 0, last_refill_date: '2026-09-16T12:00:00.000Z' })
     const res = await open('pack-0006')
     expect(res.status).toBe(409)
     expect(await res.json()).toEqual({
       error: 'NO_PACKS',
-      next_refill_at: '2026-09-17T03:00:00.000Z',
+      next_refill_at: '2026-09-16T15:00:00.000Z',
     })
     const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM packs').first<{ n: number }>()
     expect(count?.n).toBe(0)
   })
 
   it('refills lazily before charging', async () => {
-    await seedUser({ packs_available: 0, last_refill_date: '2026-09-15' })
+    await seedUser({ packs_available: 0, last_refill_date: '2026-09-16T09:00:00.000Z' })
     const res = await open('pack-0007')
     expect(res.status).toBe(200)
-    expect(((await res.json()) as PackResponse).packs_available).toBe(2)
+    expect(((await res.json()) as PackResponse).packs_available).toBe(24)
   })
 
   it('returns 404 for an unknown set or a series without recipe', async () => {
-    await seedUser({ packs_available: 2, last_refill_date: '2026-09-16' })
+    await seedUser({ packs_available: 2, last_refill_date: '2026-09-16T12:00:00.000Z' })
     expect((await open('pack-0008', 'zz9')).status).toBe(404)
     expect((await open('pack-0009', 'swsh12')).status).toBe(404)
   })
 
   it('maps provider failures to 503 without charging', async () => {
-    await seedUser({ packs_available: 2, last_refill_date: '2026-09-16' })
+    await seedUser({ packs_available: 2, last_refill_date: '2026-09-16T12:00:00.000Z' })
     const failing = createApp({
       provider: {
         getSet: async () => {
@@ -177,7 +177,11 @@ describe('POST /api/packs', () => {
   })
 
   it('increments packs_since_hit relative to the stored value', async () => {
-    await seedUser({ packs_available: 6, last_refill_date: '2026-09-16', packs_since_hit: 2 })
+    await seedUser({
+      packs_available: 6,
+      last_refill_date: '2026-09-16T12:00:00.000Z',
+      packs_since_hit: 2,
+    })
     const a = (await (await open('pack-0012')).json()) as PackResponse
     // Simula outra abertura que já incrementou o contador no meio do caminho.
     await env.DB.prepare('UPDATE users SET packs_since_hit = packs_since_hit + 1 WHERE id = ?')
@@ -190,7 +194,11 @@ describe('POST /api/packs', () => {
   })
 
   it('applies pity from the stored counter', async () => {
-    await seedUser({ packs_available: 2, last_refill_date: '2026-09-16', packs_since_hit: 6 })
+    await seedUser({
+      packs_available: 2,
+      last_refill_date: '2026-09-16T12:00:00.000Z',
+      packs_since_hit: 6,
+    })
     const pack = (await (await open('pack-0011')).json()) as PackResponse
     expect(pack.hit).toBe(true)
     const user = await env.DB.prepare('SELECT packs_since_hit FROM users WHERE id = ?')

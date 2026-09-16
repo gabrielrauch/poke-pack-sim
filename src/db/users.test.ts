@@ -4,7 +4,7 @@ import { favoritesOf, findUserByTokenHash, persistRefill } from './users'
 import { resetDb, seedUser } from '../test/seed'
 import { hashToken } from '../api/auth'
 
-const allowance = { daily: 3, cap: 6 }
+const allowance = { amount: 3, hours: 24, cap: 6 }
 
 describe('users', () => {
   beforeEach(resetDb)
@@ -27,7 +27,7 @@ describe('users', () => {
     expect(favoritesOf({ favorites: '[1, "Eevee"]' })).toEqual(['Eevee'])
   })
 
-  it('persists a refill only when the day changed', async () => {
+  it('persists a refill only when the period changed', async () => {
     await seedUser({ packs_available: 1, last_refill_date: '2026-09-15' })
     const user = (await findUserByTokenHash(
       env.DB,

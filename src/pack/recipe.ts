@@ -11,7 +11,7 @@ export type Recipe = {
   hit_tiers: Tier[]
   pity: { after: number; min_tier: Tier }
   favorites_multiplier: number
-  allowance: { daily: number; cap: number }
+  allowance: { amount: number; hours: number; cap: number }
 }
 
 const TIERS = new Set<string>(TIER_ORDER)
@@ -60,10 +60,11 @@ export function parseRecipe(raw: unknown): Recipe {
   check(isPositive(raw.favorites_multiplier), 'favorites_multiplier must be positive')
   check(
     isRecord(raw.allowance) &&
-      isPositiveInt(raw.allowance.daily) &&
+      isPositiveInt(raw.allowance.amount) &&
+      isPositiveInt(raw.allowance.hours) &&
       isPositiveInt(raw.allowance.cap) &&
-      (raw.allowance.cap as number) >= (raw.allowance.daily as number),
-    'allowance needs daily > 0 and cap >= daily',
+      (raw.allowance.cap as number) >= (raw.allowance.amount as number),
+    'allowance needs amount > 0, hours > 0 and cap >= amount',
   )
   return raw as Recipe
 }

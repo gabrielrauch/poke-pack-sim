@@ -1,39 +1,36 @@
 import { describe, expect, it } from 'vitest'
 import { applyRefill } from './refill'
 
-const allowance = { daily: 3, cap: 6 }
+const allowance = { amount: 3, hours: 3, cap: 6 }
+const p1 = '2026-09-16T12:00:00.000Z'
+const p2 = '2026-09-16T15:00:00.000Z'
 
 describe('applyRefill', () => {
-  it('refills on the first day ever', () => {
-    expect(
-      applyRefill({ packsAvailable: 0, lastRefillDate: null }, '2026-09-16', allowance),
-    ).toEqual({
+  it('refills on the first period ever', () => {
+    expect(applyRefill({ packsAvailable: 0, lastRefillDate: null }, p1, allowance)).toEqual({
       packsAvailable: 3,
-      lastRefillDate: '2026-09-16',
+      lastRefillDate: p1,
     })
   })
 
-  it('does nothing twice on the same day', () => {
-    const state = { packsAvailable: 1, lastRefillDate: '2026-09-16' }
-    expect(applyRefill(state, '2026-09-16', allowance)).toBe(state)
+  it('does nothing twice in the same period', () => {
+    const state = { packsAvailable: 1, lastRefillDate: p1 }
+    expect(applyRefill(state, p1, allowance)).toBe(state)
   })
 
-  it('refills once per new day and caps the total', () => {
-    const state = { packsAvailable: 5, lastRefillDate: '2026-09-15' }
-    expect(applyRefill(state, '2026-09-16', allowance)).toEqual({
-      packsAvailable: 6,
-      lastRefillDate: '2026-09-16',
-    })
+  it('refills once per new period and caps the total', () => {
+    const state = { packsAvailable: 5, lastRefillDate: p1 }
+    expect(applyRefill(state, p2, allowance)).toEqual({ packsAvailable: 6, lastRefillDate: p2 })
   })
 
-  it('never refills for a day before the last refill', () => {
-    const state = { packsAvailable: 0, lastRefillDate: '2026-09-16' }
-    expect(applyRefill(state, '2026-09-15', allowance)).toBe(state)
+  it('never refills for a period before the last refill', () => {
+    const state = { packsAvailable: 0, lastRefillDate: p2 }
+    expect(applyRefill(state, p1, allowance)).toBe(state)
   })
 
   it('does not mutate the input', () => {
     const state = { packsAvailable: 0, lastRefillDate: null }
-    applyRefill(state, '2026-09-16', allowance)
+    applyRefill(state, p1, allowance)
     expect(state).toEqual({ packsAvailable: 0, lastRefillDate: null })
   })
 })

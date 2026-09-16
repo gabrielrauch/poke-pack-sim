@@ -9,15 +9,14 @@ if (!name) {
   process.exit(1)
 }
 const remote = process.argv.includes('--remote')
-const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date())
 
 const token = randomBytes(32).toString('base64url')
 const tokenHash = createHash('sha256').update(token, 'utf8').digest('hex')
 const id = randomUUID()
 const escaped = name.replaceAll("'", "''")
 
-// last_refill_date = hoje: a primeira abertura não recarrega por cima dos 3 iniciais.
-const sql = `INSERT INTO users (id, name, token_hash, packs_available, last_refill_date) VALUES ('${id}', '${escaped}', '${tokenHash}', 3, '${today}');`
+// Sem recarga registrada: a primeira requisição dela recarrega a cota inteira.
+const sql = `INSERT INTO users (id, name, token_hash, packs_available, last_refill_date) VALUES ('${id}', '${escaped}', '${tokenHash}', 0, NULL);`
 
 execFileSync(
   'pnpm',
