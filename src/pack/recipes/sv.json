@@ -1,0 +1,22 @@
+{
+  "size": 5,
+  "slots": [
+    { "count": 3, "pool": { "common": 6, "uncommon": 4 } },
+    { "count": 1, "reverse": true, "pool": { "common": 5, "uncommon": 3, "rare": 2 } },
+    {
+      "count": 1,
+      "pool": {
+        "rare": 55,
+        "double_rare": 20,
+        "illustration_rare": 14,
+        "ultra_rare": 7,
+        "special_illustration_rare": 3,
+        "hyper_rare": 1
+      }
+    }
+  ],
+  "hit_tiers": ["illustration_rare", "ultra_rare", "special_illustration_rare", "hyper_rare"],
+  "pity": { "after": 6, "min_tier": "illustration_rare" },
+  "favorites_multiplier": 3,
+  "allowance": { "daily": 3, "cap": 6 }
+}
