@@ -1,4 +1,5 @@
 .stage {
+  position: relative;
   height: 100vh;
   height: 100dvh;
   display: flex;
@@ -192,10 +193,87 @@
   padding: 4px 8px;
   border-radius: 8px;
 }
+.link {
+  color: var(--ink-dim);
+  font-weight: 500;
+  text-decoration: none;
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+a.btn {
+  display: inline-block;
+  text-decoration: none;
+}
+
+/* ---------- estado (erro, sem pacotes) ---------- */
+.status {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 22px 20px;
+  border-radius: 18px;
+  text-align: center;
+  color: #fff;
+  background: rgba(12, 9, 40, 0.86);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: fadeIn 250ms both;
+}
+.status b {
+  font-size: 20px;
+}
+.status p {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* ---------- fallback sem WebGL (§8.11) ---------- */
+.fbTap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fbCard {
+  width: var(--card-w);
+  height: calc(var(--card-w) * 1.4);
+  border-radius: calc(var(--card-w) * 0.05);
+  object-fit: cover;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  animation: fadeIn 400ms both;
+}
+.fbPack {
+  width: min(62vw, 250px);
+  aspect-ratio: 1 / 1.62;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #6a4cff, #2b2273);
+  color: #fff;
+  font-weight: 700;
+  font-size: 22px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mini,
   .summary,
-  .fanCard {
+  .fanCard,
+  .status,
+  .fbCard {
     animation: none;
   }
 }

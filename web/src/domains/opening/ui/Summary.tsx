@@ -8,10 +8,15 @@ import s from './opening.module.css'
 export function Summary({
   cards,
   onAgain,
+  againLabel = 'Abrir outro pacote',
+  againDisabled = false,
   children,
 }: {
   cards: readonly PackCard[]
   onAgain: () => void
+  /** "Volta amanhã" quando a cota acabou (§7.1). */
+  againLabel?: string
+  againDisabled?: boolean
   children?: ReactNode
 }) {
   const button = useRef<HTMLButtonElement>(null)
@@ -44,8 +49,14 @@ export function Summary({
         ))}
       </div>
       <div className={s.sumSub}>{summarySubtitle(cards)}</div>
-      <button ref={button} type="button" className={s.btn} onClick={onAgain}>
-        Abrir outro pacote
+      <button
+        ref={button}
+        type="button"
+        className={s.btn}
+        onClick={onAgain}
+        disabled={againDisabled}
+      >
+        {againLabel}
       </button>
       {children}
     </div>

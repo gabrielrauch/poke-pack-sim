@@ -8,10 +8,14 @@ import './styles.css'
 import { loadSession } from '../domains/auth/session'
 import { App } from './App'
 import { ErrorBoundary } from './ErrorBoundary'
+import { prefetchOpening } from './prefetch'
 import { createQueryClient } from './query'
 
 registerSW({ immediate: true })
 loadSession()
+
+// A Home é a única tela que não é a abertura por enquanto: já deixa o chunk do three baixado.
+if (location.pathname === '/') prefetchOpening()
 
 const queryClient = createQueryClient()
 
