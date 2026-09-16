@@ -56,16 +56,11 @@ export class TcgdexProvider implements CardProvider {
   }
 
   async #request(body: string): Promise<CatalogData> {
-    let res: Response
-    try {
-      res = await this.#fetch(this.#endpoint, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', accept: 'application/json' },
-        body,
-      })
-    } catch (err) {
-      throw new ProviderError('UPSTREAM', 'TCGdex request failed', { cause: err })
-    }
+    const res = await this.#fetch(this.#endpoint, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body,
+    })
     if (res.status >= 500) throw new ProviderError('UPSTREAM', `TCGdex responded ${res.status}`)
     if (!res.ok) throw new ProviderError('BAD_RESPONSE', `TCGdex responded ${res.status}`)
     const type = res.headers.get('content-type') ?? ''
