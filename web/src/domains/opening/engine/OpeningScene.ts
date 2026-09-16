@@ -248,7 +248,10 @@ export class OpeningScene {
     this.stack.scale.setScalar(STACK.hiddenScale)
     this.pack.reset()
     for (const t of textures) this.renderer.initTexture(t)
+    this.stack.visible = true
     this.renderer.compile(this.scene, this.camera)
+    // Escondida até subir pela boca (§8.5, t=140): atrás do corpo ela ainda apareceria nas bordas com o tilt.
+    this.stack.visible = false
 
     this.setState('pack')
     const root = this.pack.root
@@ -472,6 +475,7 @@ export class OpeningScene {
     )
     tw.after(OPENING.cutOff.at, () => this.tearLine.hide(tw))
     tw.after(OPENING.rise.at, () => {
+      this.stack.visible = true
       const s = STACK.riseScale
       const rise = { duration: OPENING.rise.duration, easing: OPENING.rise.easing }
       tw.to(this.stack.position, { y: STACK.riseY * this.cardH }, rise)

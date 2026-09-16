@@ -26,10 +26,10 @@ export function holoPreset(tier: Tier, reverse: boolean): HoloPreset {
     case 'double_rare':
       return { mask: 2, foil: 0.45, gold: 0, sparkle: 0, edge: GOLD_LINE, edgeStrength: 0.55 }
     case 'hyper_rare':
-      return { mask: 3, foil: 0.62, gold: 1, sparkle: 1, edge: GOLD_EDGE, edgeStrength: 0.5 }
+      return { mask: 3, foil: 0.3, gold: 1, sparkle: 1, edge: GOLD_EDGE, edgeStrength: 0.4 }
     default:
       // illustration_rare, ultra_rare, special_illustration_rare e os tiers de outros sets
-      return { mask: 3, foil: 0.5, gold: 0, sparkle: 1, edge: WHITE, edgeStrength: 0.35 }
+      return { mask: 3, foil: 0.4, gold: 0, sparkle: 1, edge: WHITE, edgeStrength: 0.3 }
   }
 }
 
@@ -107,7 +107,7 @@ void main() {
   // Glare (soft-light) no ponto do olhar: branco .55 → .12 aos 22% → 0 aos 50%.
   vec2 gp = vec2(0.5) - tilt * 0.55;
   float gd = length((vUv - gp) * vec2(1.0, ASPECT));
-  float g = 0.55 * (1.0 - smoothstep(0.0, 0.22, gd)) + 0.12 * (1.0 - smoothstep(0.22, 0.5, gd));
+  float g = 0.32 * (1.0 - smoothstep(0.0, 0.22, gd)) + 0.08 * (1.0 - smoothstep(0.22, 0.5, gd)); // tune: glare
   col = mix(col, 2.0 * col - col * col, g);
 
   // Borda: aro da carta (inteira) ou filete ao redor da arte (double_rare).

@@ -14,7 +14,7 @@ it('tabela do §8.9', () => {
   expect(holoPreset('double_rare', false)).toMatchObject({ mask: 2, edgeStrength: 0.55 })
   expect(holoPreset('illustration_rare', false)).toMatchObject({
     mask: 3,
-    foil: 0.5,
+    foil: 0.4,
     sparkle: 1,
     gold: 0,
   })
@@ -22,7 +22,7 @@ it('tabela do §8.9', () => {
   expect(holoPreset('special_illustration_rare', false).sparkle).toBe(1)
   expect(holoPreset('hyper_rare', false)).toMatchObject({
     mask: 3,
-    foil: 0.62,
+    foil: 0.3,
     gold: 1,
     sparkle: 1,
   })
