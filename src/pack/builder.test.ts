@@ -13,7 +13,18 @@ import sv from './recipes/sv.json'
 const catalog = buildCatalog('sv03.5', 'pt', enFixture as CatalogData, ptFixture as CatalogData)!
 const recipe = parseRecipe(sv)
 const byN = new Map(catalog.cards.map((c) => [c.n, c]))
-const seedOf = (i: number): Seed => [i, i * 7 + 1, i * 13 + 2, i * 31 + 3]
+/** splitmix32: seeds bem espalhadas a partir de um índice, como o Worker faz com SHA-256. */
+function seedOf(index: number): Seed {
+  let x = index >>> 0
+  const next = () => {
+    x = (x + 0x9e3779b9) >>> 0
+    let z = x
+    z = Math.imul(z ^ (z >>> 16), 0x85ebca6b) >>> 0
+    z = Math.imul(z ^ (z >>> 13), 0xc2b2ae35) >>> 0
+    return (z ^ (z >>> 16)) >>> 0
+  }
+  return [next(), next(), next(), next()]
+}
 const tierIndex = (tier: Tier) => TIER_ORDER.indexOf(tier)
 
 function input(overrides: Partial<BuildInput> = {}): BuildInput {

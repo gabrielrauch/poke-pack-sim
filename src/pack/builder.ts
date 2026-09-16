@@ -32,16 +32,6 @@ const poolEntries = (pool: Pool): PoolEntries => Object.entries(pool) as [Tier, 
  */
 export function buildPack({ catalog, recipe, profile, seed }: BuildInput): BuildResult {
   const rng = createRng(seed)
-  // xoshiro128** starts from the seed bytes directly (no splitmix warm-up), so with small,
-  // low-entropy seeds its first raw output stays biased toward small values. Packs are seeded
-  // from SHA-256 bytes in production, where this never shows, but a pack whose very first
-  // weighted pick has more than one candidate (e.g. a single-tier, single-card-count recipe)
-  // can otherwise skew toward the first-listed candidate. Discard a few outputs to mix the
-  // state before the first draw that can affect pack contents.
-  rng.nextU32()
-  rng.nextU32()
-  rng.nextU32()
-  rng.nextU32()
   const favorites = new Set(profile.favorites)
   const taken = new Set<string>()
   const cards: PackCard[] = []
