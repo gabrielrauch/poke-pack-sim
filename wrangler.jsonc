@@ -18,4 +18,5 @@
     },
   ],
   "observability": { "enabled": true },
+  "vars": { "TIMEZONE": "America/Sao_Paulo" },
 }

@@ -18,7 +18,10 @@
     "test:coverage": "vitest run --coverage --project node",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm format:check && pnpm typecheck && pnpm test && pnpm test:coverage"
+    "check": "pnpm format:check && pnpm typecheck && pnpm test && pnpm test:coverage",
+    "db:migrate": "wrangler d1 migrations apply pack-sim --local",
+    "db:migrate:remote": "wrangler d1 migrations apply pack-sim --remote",
+    "user:create": "node scripts/create-user.ts"
   },
   "dependencies": {
     "hono": "4.13.8",
