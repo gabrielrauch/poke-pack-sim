@@ -30,4 +30,14 @@ export default defineConfig({
   server: {
     proxy: { '/api': 'http://localhost:8787' },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('/node_modules/three/')) return 'three'
+          return undefined
+        },
+      },
+    },
+  },
 })
