@@ -46,9 +46,14 @@ export function seedFromBytes(bytes: Uint8Array): Seed {
 
 /** Sorteio ponderado. Com uma única entrada não consome o RNG (mantém sequências comparáveis). */
 export function pickWeighted<T>(rng: Rng, entries: ReadonlyArray<readonly [T, number]>): T {
+  if (entries.length === 0) throw new RangeError('pickWeighted needs at least one entry')
   let total = 0
-  for (const [, weight] of entries) total += weight
-  if (!(total > 0)) throw new RangeError('pickWeighted needs at least one positive weight')
+  for (const [, weight] of entries) {
+    if (!(Number.isFinite(weight) && weight > 0)) {
+      throw new RangeError(`pickWeighted needs finite positive weights, got ${weight}`)
+    }
+    total += weight
+  }
   const last = entries[entries.length - 1]![0]
   if (entries.length === 1) return last
   const target = rng.nextFloat() * total

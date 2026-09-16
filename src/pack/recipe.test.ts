@@ -36,6 +36,8 @@ describe('parseRecipe', () => {
       'mythic',
     ],
     ['zero weight', (r) => ((r.slots[0]!.pool.common = 0), r), 'common'],
+    ['infinite weight', (r) => ((r.slots[0]!.pool.common = Number.POSITIVE_INFINITY), r), 'common'],
+    ['nan multiplier', (r) => ({ ...r, favorites_multiplier: Number.NaN }), 'favorites_multiplier'],
     ['size mismatch', (r) => ({ ...r, size: 4 }), 'size'],
     ['bad hit tier', (r) => ({ ...r, hit_tiers: ['rare', 'nope'] }), 'hit_tiers'],
     ['bad pity', (r) => ({ ...r, pity: { after: 0, min_tier: 'rare' } }), 'pity'],

@@ -81,6 +81,19 @@ describe('pickWeighted', () => {
   it('rejects empty or non-positive weights', () => {
     expect(() => pickWeighted(rngAt(0), [])).toThrow(RangeError)
     expect(() => pickWeighted(rngAt(0), [['a', 0]])).toThrow(RangeError)
+    expect(() =>
+      pickWeighted(rngAt(0), [
+        ['a', 2],
+        ['b', -1],
+      ]),
+    ).toThrow(RangeError)
+    expect(() => pickWeighted(rngAt(0), [['a', Number.NaN]])).toThrow(RangeError)
+    expect(() =>
+      pickWeighted(rngAt(0), [
+        ['a', 1],
+        ['b', Number.POSITIVE_INFINITY],
+      ]),
+    ).toThrow(RangeError)
   })
 
   it('draws proportionally over many samples', () => {

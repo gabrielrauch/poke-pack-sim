@@ -136,6 +136,29 @@ describe('buildPack', () => {
     expect(cards[0]!.tier).toBe('rare')
   })
 
+  it('pity never falls below min_tier: it fails instead of handing out a lower tier', () => {
+    const cards = [card('001', 'common'), card('002', 'rare')]
+    const locked = miniRecipe({
+      slots: [{ count: 1, pool: { hyper_rare: 1 } }],
+      size: 1,
+      pity: { after: 1, min_tier: 'ultra_rare' },
+    })
+    const build = () =>
+      buildPack(
+        input({
+          catalog: mini(cards),
+          recipe: locked,
+          profile: { packsSinceHit: 1, favorites: [] },
+        }),
+      )
+    expect(build).toThrow(PackError)
+    expect(build).toThrow(/ultra_rare/)
+    const relaxed = buildPack(
+      input({ catalog: mini(cards), recipe: locked, profile: { packsSinceHit: 0, favorites: [] } }),
+    )
+    expect(relaxed.cards[0]!.tier).toBe('rare')
+  })
+
   it('falls back one tier at a time when a tier has no card', () => {
     const cards = [card('001', 'common'), card('002', 'uncommon'), card('003', 'common')]
     const one = miniRecipe({ slots: [{ count: 1, pool: { hyper_rare: 1 } }], size: 1 })

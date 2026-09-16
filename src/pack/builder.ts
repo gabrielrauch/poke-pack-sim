@@ -39,14 +39,15 @@ export function buildPack({ catalog, recipe, profile, seed }: BuildInput): Build
   const pityActive = profile.packsSinceHit >= recipe.pity.after
 
   recipe.slots.forEach((slot, index) => {
-    const pool =
-      index === rareSlot && pityActive
-        ? withPity(poolEntries(slot.pool), recipe.pity.min_tier)
-        : poolEntries(slot.pool)
+    const locked = index === rareSlot && pityActive
+    const pool = locked
+      ? withPity(poolEntries(slot.pool), recipe.pity.min_tier)
+      : poolEntries(slot.pool)
+    const floor = locked ? recipe.pity.min_tier : TIER_ORDER[0]
     const reverse = slot.reverse === true
     for (let i = 0; i < slot.count; i++) {
       const tier = pickWeighted(rng, pool)
-      const candidates = available(catalog, tier, reverse, taken)
+      const candidates = available(catalog, tier, floor, reverse, taken)
       const weighted = candidates.map(
         (c) => [c, favorites.has(c.name) ? recipe.favorites_multiplier : 1] as const,
       )
@@ -73,14 +74,20 @@ function withPity(pool: PoolEntries, minTier: Tier): PoolEntries {
   return kept.length > 0 ? kept : [[minTier, 1]]
 }
 
-/** Cartas sorteáveis no tier; tier sem nada cai um abaixo, até `common`. Abaixo disso é erro de configuração. */
-function available(catalog: SetCatalog, tier: Tier, reverse: boolean, taken: Set<string>): Card[] {
-  for (let i = TIER_ORDER.indexOf(tier); i >= 0; i--) {
+/** Cartas sorteáveis no tier; tier sem nada cai um abaixo, até `floor` (`common`, ou `min_tier` sob pity). Abaixo disso é erro de configuração. */
+function available(
+  catalog: SetCatalog,
+  tier: Tier,
+  floor: Tier,
+  reverse: boolean,
+  taken: Set<string>,
+): Card[] {
+  for (let i = TIER_ORDER.indexOf(tier); i >= TIER_ORDER.indexOf(floor); i--) {
     const current = TIER_ORDER[i]!
     const found = catalog.cards.filter(
       (c) => c.tier === current && !taken.has(c.n) && (!reverse || c.reverse),
     )
     if (found.length > 0) return found
   }
-  throw new PackError(`no card available for tier ${tier} or below in set ${catalog.id}`)
+  throw new PackError(`no card available for tier ${tier} down to ${floor} in set ${catalog.id}`)
 }

@@ -16,7 +16,8 @@ export type Recipe = {
 
 const TIERS = new Set<string>(TIER_ORDER)
 const isTier = (value: unknown): value is Tier => typeof value === 'string' && TIERS.has(value)
-const isPositive = (value: unknown): value is number => typeof value === 'number' && value > 0
+const isPositive = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value > 0
 const isPositiveInt = (value: unknown): value is number =>
   Number.isInteger(value) && (value as number) > 0
 const isRecord = (value: unknown): value is Record<string, unknown> =>
