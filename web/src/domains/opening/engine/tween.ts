@@ -97,6 +97,7 @@ export class Tweens {
   private readonly list: Active[] = []
   /** `now` do `update()` em andamento, para tweens agendados por um `onComplete` (começam neste mesmo frame). */
   private updatingNow: number | null = null
+  private readonly completed: Array<() => void> = []
 
   get active(): number {
     return this.list.length
@@ -142,30 +143,41 @@ export class Tweens {
     return this.push({}, [], [], null, { duration: 0, delay: ms, onComplete: fn })
   }
 
+  /**
+   * Percorre de trás para a frente com swap-and-pop; `onComplete` só roda depois da travessia
+   * (tweens que ele cria ou cancela não mexem em índices ainda não visitados) e `updatingNow`
+   * fica válido durante os callbacks para o encadeamento começar neste mesmo instante.
+   */
   update(now: number): void {
     this.updatingNow = now
     const list = this.list
-    for (let i = list.length - 1; i >= 0; i--) {
-      const a = list[i]!
-      if (a.start < 0) a.start = now + a.delay * this.timeScale
-      if (now < a.start) continue
-      if (!a.frames) {
-        a.frames = [
-          { at: 0, values: a.keys.map((k) => a.target[k] ?? 0) },
-          { at: 1, values: a.end! },
-        ]
+    const completed = this.completed
+    try {
+      for (let i = list.length - 1; i >= 0; i--) {
+        const a = list[i]!
+        if (a.start < 0) a.start = now + a.delay * this.timeScale
+        if (now < a.start) continue
+        if (!a.frames) {
+          a.frames = [
+            { at: 0, values: a.keys.map((k) => a.target[k] ?? 0) },
+            { at: 1, values: a.end! },
+          ]
+        }
+        const duration = a.duration * this.timeScale
+        const raw = duration <= 0 ? 1 : Math.min(1, (now - a.start) / duration)
+        if (a.keys.length > 0) apply(a, a.ease(raw))
+        if (raw >= 1) {
+          a.done = true
+          list[i] = list[list.length - 1]!
+          list.pop()
+          if (a.onComplete) completed.push(a.onComplete)
+        }
       }
-      const duration = a.duration * this.timeScale
-      const raw = duration <= 0 ? 1 : Math.min(1, (now - a.start) / duration)
-      if (a.keys.length > 0) apply(a, a.ease(raw))
-      if (raw >= 1) {
-        a.done = true
-        list[i] = list[list.length - 1]!
-        list.pop()
-        a.onComplete?.()
-      }
+      for (let i = 0; i < completed.length; i++) completed[i]!()
+    } finally {
+      completed.length = 0
+      this.updatingNow = null
     }
-    this.updatingNow = null
   }
 
   cancelAll(): void {

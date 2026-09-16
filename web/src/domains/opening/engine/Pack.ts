@@ -2,7 +2,7 @@ import { Group, Mesh, MeshPhysicalMaterial, type PlaneGeometry, type Texture } f
 import { MS } from '../../../shared/lib/motion'
 import { bodyOutline, guidePhase, stripOutline, sweepPhase, type Outline } from './packMath'
 import { canvasTexture } from './textures'
-import type { Tweens } from './tween'
+import type { Tween, Tweens } from './tween'
 
 export const PACK_ASPECT = 1.62
 export const STRIP_FRAC = 0.21
@@ -26,6 +26,7 @@ export class Pack {
   height = 0
   stripY = 0
   private held = false
+  private heldTween: Tween | null = null
   private readonly bodyMap: Texture
   private readonly stripIntact: Texture
   private readonly stripTorn: Texture
@@ -106,7 +107,8 @@ export class Pack {
     if (held === this.held) return
     this.held = held
     const s = held ? 1.04 : 1
-    tweens.to(this.tilt.scale, { x: s, y: s, z: s }, { duration: MS.held })
+    this.heldTween?.cancel()
+    this.heldTween = tweens.to(this.tilt.scale, { x: s, y: s, z: s }, { duration: MS.held })
   }
 
   /** A tira troca para a borda rasgada (§8.5, t=0). */

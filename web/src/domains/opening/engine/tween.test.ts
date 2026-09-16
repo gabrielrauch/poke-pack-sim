@@ -181,3 +181,36 @@ describe('Tweens', () => {
     expect(t.active).toBe(0)
   })
 })
+
+describe('Tweens: callbacks depois da travessia', () => {
+  it('cancelar outro tween dentro de onComplete não pula ninguém no mesmo frame', () => {
+    const t = new Tweens()
+    const a = { x: 0 }
+    const b = { x: 0 }
+    const c = { x: 0 }
+    const tb = t.to(b, { x: 1 }, { duration: 100 })
+    t.to(a, { x: 1 }, { duration: 10, onComplete: () => tb.cancel() })
+    t.to(c, { x: 1 }, { duration: 100 })
+    t.update(0)
+    t.update(10)
+    expect(a.x).toBe(1)
+    expect(b.x).toBeCloseTo(0.1)
+    expect(c.x).toBeCloseTo(0.1)
+    expect(t.active).toBe(1)
+    t.update(100)
+    expect(c.x).toBe(1)
+  })
+
+  it('um callback que lança não deixa o relógio interno preso', () => {
+    const t = new Tweens()
+    const o = { x: 0 }
+    t.after(0, () => {
+      throw new Error('boom')
+    })
+    expect(() => t.update(0)).toThrow('boom')
+    t.to(o, { x: 1 }, { duration: 100 })
+    t.update(1000)
+    t.update(1050)
+    expect(o.x).toBeCloseTo(0.5)
+  })
+})
