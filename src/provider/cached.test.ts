@@ -95,6 +95,26 @@ describe('CachedProvider', () => {
     expect(await provider.getSet('sv03.5', 'pt')).toEqual(catalog)
   })
 
+  it('serves the newest stale entry when memory is newer than the Cache API', async () => {
+    const { cache } = fakeCache()
+    const older = { ...catalog, name: 'older' }
+    const newer = { ...catalog, name: 'newer' }
+    const first = setup([older], cache)
+    await first.provider.getSet('sv03.5', 'pt')
+
+    const failingCache: CacheLike = {
+      match: cache.match,
+      put: async () => {
+        throw new Error('write failed')
+      },
+    }
+    const second = setup([newer, new ProviderError('UPSTREAM', 'down')], failingCache)
+    second.clock.now = first.clock.now + DEFAULT_TTL_MS + 1
+    expect((await second.provider.getSet('sv03.5', 'pt'))?.name).toBe('newer')
+    second.clock.now += DEFAULT_TTL_MS + 1
+    expect((await second.provider.getSet('sv03.5', 'pt'))?.name).toBe('newer')
+  })
+
   it('propagates the failure when nothing is cached', async () => {
     const { cache } = fakeCache()
     const { provider } = setup([new ProviderError('UPSTREAM', 'down')], cache)

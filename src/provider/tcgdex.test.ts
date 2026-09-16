@@ -116,6 +116,29 @@ describe('TcgdexProvider', () => {
     expect(await codeOf(provider(fetchImpl).getSet('sv03.5', 'en'))).toBe('BAD_RESPONSE')
   })
 
+  it('returns null for an unknown set even when the localized query fails', async () => {
+    const fetchImpl = fakeFetch((lang) =>
+      lang === 'en' ? json({ data: { set: null, cards: [] } }) : new Response('', { status: 503 }),
+    )
+    expect(await provider(fetchImpl).getSet('nope', 'pt')).toBeNull()
+  })
+
+  it('treats malformed JSON as BAD_RESPONSE without retrying', async () => {
+    const fetchImpl = fakeFetch(
+      () =>
+        new Response('{not json', { status: 200, headers: { 'content-type': 'application/json' } }),
+    )
+    expect(await codeOf(provider(fetchImpl).getSet('sv03.5', 'en'))).toBe('BAD_RESPONSE')
+    expect(fetchImpl.calls).toHaveLength(1)
+  })
+
+  it('rejects data without set or cards as BAD_RESPONSE', async () => {
+    const noSet = fakeFetch(() => json({ data: { cards: [] } }))
+    expect(await codeOf(provider(noSet).getSet('sv03.5', 'en'))).toBe('BAD_RESPONSE')
+    const noCards = fakeFetch(() => json({ data: { set: en.set } }))
+    expect(await codeOf(provider(noCards).getSet('sv03.5', 'en'))).toBe('BAD_RESPONSE')
+  })
+
   it('surfaces catalog errors from the merge', async () => {
     const short: CatalogData = { set: en.set, cards: en.cards.slice(1) }
     const fetchImpl = fakeFetch(() => json({ data: short }))

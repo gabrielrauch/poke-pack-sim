@@ -31,11 +31,15 @@ export class TcgdexProvider implements CardProvider {
   }
 
   async getSet(setId: string, lang: string): Promise<SetCatalog | null> {
-    const [en, localized] = await Promise.all([
+    // Paralelo, mas set inexistente em `en` é `null` mesmo que a query localizada falhe.
+    const [enResult, localizedResult] = await Promise.allSettled([
       this.#query(setId, 'en'),
-      lang === 'en' ? null : this.#query(setId, lang),
+      lang === 'en' ? Promise.resolve(null) : this.#query(setId, lang),
     ])
-    return buildCatalog(setId, lang, en, localized)
+    if (enResult.status === 'rejected') throw enResult.reason
+    if (!enResult.value.set) return null
+    if (localizedResult.status === 'rejected') throw localizedResult.reason
+    return buildCatalog(setId, lang, enResult.value, localizedResult.value)
   }
 
   async #query(setId: string, lang: string): Promise<CatalogData> {
@@ -67,12 +71,20 @@ export class TcgdexProvider implements CardProvider {
     if (!type.includes('application/json')) {
       throw new ProviderError('BAD_RESPONSE', `TCGdex content-type ${type || 'missing'}`)
     }
-    const json = (await res.json()) as GqlResponse
+    let json: GqlResponse
+    try {
+      json = (await res.json()) as GqlResponse
+    } catch (err) {
+      throw new ProviderError('BAD_RESPONSE', 'TCGdex returned malformed JSON', { cause: err })
+    }
     if (json.errors?.length) {
       const messages = json.errors.map((e) => e.message).join('; ')
       throw new ProviderError('BAD_RESPONSE', `TCGdex GraphQL errors: ${messages}`)
     }
-    if (!json.data) throw new ProviderError('BAD_RESPONSE', 'TCGdex GraphQL returned no data')
-    return json.data
+    const data = json.data
+    if (!data || typeof data !== 'object' || !('set' in data) || !Array.isArray(data.cards)) {
+      throw new ProviderError('BAD_RESPONSE', 'TCGdex GraphQL data is missing set or cards')
+    }
+    return data
   }
 }

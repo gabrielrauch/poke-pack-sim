@@ -21,6 +21,12 @@ const FETCHED_AT_HEADER = 'x-fetched-at'
 /** Bem maior que o TTL: a entrada vencida precisa continuar no Cache API para ser servida quando o TCGdex cair. */
 const CACHE_MAX_AGE_S = 30 * 24 * 60 * 60
 
+/** A memória pode ser mais nova que o Cache API quando um `#write` falhou. */
+function newest(a: Entry | undefined, b: Entry | undefined): Entry | undefined {
+  if (!a || !b) return a ?? b
+  return a.fetchedAt >= b.fetchedAt ? a : b
+}
+
 /**
  * Memória do isolate (mais rápida, some com o isolate) na frente do Cache API (por datacenter).
  * Vencido + TCGdex fora = serve o vencido. Sem nada = propaga o erro.
@@ -44,7 +50,8 @@ export class CachedProvider implements CardProvider {
     const inMemory = this.#memory.get(key)
     if (inMemory && this.#isFresh(inMemory)) return inMemory.catalog
 
-    const stored = (await this.#read(key)) ?? inMemory
+    const persisted = await this.#read(key)
+    const stored = newest(persisted, inMemory)
     if (stored && this.#isFresh(stored)) {
       this.#memory.set(key, stored)
       return stored.catalog
