@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { ownedInSet } from '../db/owned'
-import { findPack, openPackStatements, type PackRow, type StoredCard } from '../db/packs'
+import { findPack, listPacks, openPackStatements, type PackRow, type StoredCard } from '../db/packs'
 import { favoritesOf, persistRefill, type UserRow } from '../db/users'
 import { buildPack, missingTiers, recipeForSet, seedFromBytes } from '../pack'
 import { ALLOWANCE } from './allowance'
@@ -123,6 +123,26 @@ export function packRoutes({ provider, now = () => new Date() }: AppDeps) {
       cards,
       hit: built.hit,
       packs_available: user.packs_available - 1,
+    })
+  })
+
+  app.get('/api/packs', requireUser, async (c) => {
+    const rawLimit = Number(c.req.query('limit') ?? '30')
+    const limit = Number.isInteger(rawLimit) ? Math.min(Math.max(rawLimit, 1), 100) : 30
+    const rawBefore = c.req.query('before') ?? null
+    const before = rawBefore !== null && !Number.isNaN(Date.parse(rawBefore)) ? rawBefore : null
+    const rows = await listPacks(c.env.DB, c.get('user').id, limit + 1, before)
+    const page = rows.slice(0, limit)
+    c.header('Cache-Control', 'private, no-store')
+    return c.json({
+      packs: page.map((row) => ({
+        pack_id: row.id,
+        set_id: row.set_id,
+        opened_at: row.opened_at,
+        hit: row.hit === 1,
+        cards: JSON.parse(row.cards) as StoredCard[],
+      })),
+      next_before: rows.length > limit ? page[page.length - 1]!.opened_at : null,
     })
   })
 
