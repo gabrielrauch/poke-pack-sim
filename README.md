@@ -24,3 +24,10 @@ Todas as rotas em `/api/*` (menos `health` e `catalog`) exigem `Authorization: B
 - `GET /api/collection/:set` — `{ "001": { "normal": 1, "reverse": 0 } }`
 - `GET /api/catalog/:set` — catálogo do set (provider TCGdex, cache 1 h)
 - `GET /manifest.webmanifest?t=<token>` — manifest com `start_url` carregando o token (iOS)
+- `GET /api/img/<caminho no CDN>` — passthrough das imagens do TCGdex (`pt/sv/sv03.5/001/high.webp`, `.../logo.png`), cache de 7 dias; o CDN manda CORS duplicado e o navegador rejeita carregar direto
+
+## Protótipo 3D (`/lab`)
+
+`pnpm dev` (Worker, para as imagens) e `pnpm dev:web`, depois http://localhost:5173/lab. Dados falsos com imagens reais do sv03.5; `?tier=hyper_rare` escolhe a última carta (`rare`, `holo`, `double_rare`, `illustration_rare`, `ultra_rare`, `special_illustration_rare`, `hyper_rare`). O medidor no topo mostra fps, ms por frame, draw calls, triângulos e pixel ratio. Espaço/Enter rasga o pacote e vira cartas no desktop; em dev a cena fica em `window.__scene`.
+
+No iPhone: `pnpm build && wrangler versions upload` e abra a URL de preview (HTTPS, necessária para `deviceorientation`).

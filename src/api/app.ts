@@ -3,6 +3,7 @@ import { PackError } from '../pack'
 import { ProviderError } from '../provider/errors'
 import { collectionRoutes } from './collection'
 import { SET_ID, type AppDeps, type AppEnv } from './env'
+import { imageRoutes } from './images'
 import { manifestRoutes } from './manifest'
 import { meRoutes } from './me'
 import { packRoutes } from './packs'
@@ -31,6 +32,7 @@ export function createApp(deps: AppDeps) {
   app.route('/', packRoutes(deps))
   app.route('/', collectionRoutes())
   app.route('/', manifestRoutes())
+  app.route('/', imageRoutes(deps))
 
   app.notFound((c) => c.json({ error: 'NOT_FOUND' }, 404))
 
