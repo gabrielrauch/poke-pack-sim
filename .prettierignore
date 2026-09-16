@@ -2,3 +2,5 @@ docs/
 web/dist/
 pnpm-lock.yaml
 worker-configuration.d.ts
+src/provider/fixtures/
+.remember/
