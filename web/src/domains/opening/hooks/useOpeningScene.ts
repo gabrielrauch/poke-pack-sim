@@ -42,6 +42,8 @@ export function useOpeningScene({ pack, art, colors, callbacks }: OpeningSceneIn
     }
     const scene = new OpeningScene(container, colorsRef.current, forward)
     sceneRef.current = scene
+    // Só em dev: deixa o /lab inspecionar a cena pelo console (estado, stats, tweens).
+    if (import.meta.env.DEV) (window as unknown as { __scene?: OpeningScene }).__scene = scene
     return () => {
       scene.dispose()
       sceneRef.current = null

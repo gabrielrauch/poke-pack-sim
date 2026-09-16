@@ -163,6 +163,8 @@ export class OpeningScene {
     const room = new RoomEnvironment()
     this.scene.environment = pmrem.fromScene(room, 0.04).texture
     room.dispose()
+    // O RoomEnvironment é uma sala branca: em 1.0 o pacote roxo vira lilás. Só o pacote usa o env map.
+    this.scene.environmentIntensity = 0.4
     pmrem.dispose()
 
     this.dim = new Mesh(
@@ -181,6 +183,7 @@ export class OpeningScene {
 
     this.cardAssets = createCardAssets(colors)
     this.burst = new Burst(this.unitPlane, colors)
+    this.burst.setPixelRatio(dpr)
     this.tearLine = new TearLine(this.unitPlane, colors.rose)
     this.stage.position.y = STAGE_Y
     this.stack.position.z = -10
@@ -708,12 +711,13 @@ export class OpeningScene {
     this.lastFrame = -1
   }
 
-  /** Média de 30 frames acima de 20 ms: cai um degrau de pixel ratio (2 → 1,5 → 1), nunca sobe. */
+  /** Mais da metade de 30 frames acima de 20 ms: cai um degrau de pixel ratio (2 → 1,5 → 1), nunca sobe. */
   private checkBudget(): void {
     if (this.frameCount < FRAME_WARMUP || this.dprIndex >= this.dprSteps.length - 1) return
-    let sum = 0
-    for (let i = 0; i < FRAME_WINDOW; i++) sum += this.frameTimes[i]!
-    if (sum / FRAME_WINDOW > FRAME_BUDGET_MS) {
+    // Maioria dos frames acima do orçamento, não a média: um soluço isolado (GC, captura) não derruba o dpr.
+    let over = 0
+    for (let i = 0; i < FRAME_WINDOW; i++) if (this.frameTimes[i]! > FRAME_BUDGET_MS) over++
+    if (over > FRAME_WINDOW / 2) {
       this.dprIndex++
       const dpr = this.dprSteps[this.dprIndex]!
       this.renderer.setPixelRatio(dpr)

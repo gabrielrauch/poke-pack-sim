@@ -44,27 +44,25 @@ export class Pack {
     this.bodyMaterial = new MeshPhysicalMaterial({
       map: this.bodyMap,
       transparent: true,
-      metalness: 0.55,
-      roughness: 0.38,
-      clearcoat: 0.6,
-      clearcoatRoughness: 0.3,
-      iridescence: 0.55,
+      metalness: 0.3,
+      roughness: 0.5,
+      clearcoat: 0.35,
+      clearcoatRoughness: 0.35,
+      iridescence: 0.35,
       iridescenceIOR: 1.3,
-      envMapIntensity: 0.9,
       emissive: 0xffffff,
       emissiveMap: this.sweep,
-      emissiveIntensity: 0.3,
+      emissiveIntensity: 0.25,
     })
     this.stripMaterial = new MeshPhysicalMaterial({
       map: this.stripIntact,
       transparent: true,
-      metalness: 0.5,
-      roughness: 0.4,
-      clearcoat: 0.5,
-      clearcoatRoughness: 0.3,
-      iridescence: 0.4,
+      metalness: 0.3,
+      roughness: 0.5,
+      clearcoat: 0.3,
+      clearcoatRoughness: 0.35,
+      iridescence: 0.3,
       iridescenceIOR: 1.3,
-      envMapIntensity: 0.9,
       emissive: 0xffffff,
       emissiveMap: this.guide,
       emissiveIntensity: 0,
@@ -98,7 +96,7 @@ export class Pack {
     this.sweep.offset.x = 0.55 - 1.1 * sweepPhase(now)
     const g = guidePhase(now)
     this.guide.offset.x = 0.7 - 1.4 * g.x
-    this.stripMaterial.emissiveIntensity = tearing ? 0 : g.opacity * 0.5
+    this.stripMaterial.emissiveIntensity = tearing ? 0 : g.opacity * 0.4
     this.shake.position.x = tearing ? 0.7 * Math.sin(now * 0.0628) : 0
     this.shake.position.y = tearing ? 0.5 * Math.cos(now * 0.0817) : 0
   }

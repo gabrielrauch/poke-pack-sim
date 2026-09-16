@@ -1,4 +1,5 @@
 import {
+  AdditiveBlending,
   BufferAttribute,
   BufferGeometry,
   Color,
@@ -129,6 +130,7 @@ export class Burst {
         vertexShader: PASS_VERTEX,
         fragmentShader: RAYS_FRAGMENT,
         transparent: true,
+        blending: AdditiveBlending,
         depthTest: false,
         depthWrite: false,
       }),
