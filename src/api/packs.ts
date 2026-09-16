@@ -107,7 +107,6 @@ export function packRoutes({ provider, now = () => new Date() }: AppDeps) {
       openedAt,
       cards,
       hit: built.hit,
-      packsSinceHit: built.packsSinceHit,
     }
 
     try {
@@ -117,7 +116,12 @@ export function packRoutes({ provider, now = () => new Date() }: AppDeps) {
       // Corrida com o mesmo pack_id: a outra requisição gravou primeiro; devolve o que está no banco.
       if (/UNIQUE constraint failed: packs\.id/.test(message)) {
         const stored = await findPack(db, body.pack_id)
-        if (stored) return c.json(packResponse(stored, user))
+        if (stored) {
+          if (stored.user_id !== user.id || stored.set_id !== body.set_id) {
+            return c.json({ error: 'PACK_MISMATCH' }, 409)
+          }
+          return c.json(packResponse(stored, user))
+        }
       }
       // Corrida com outro pack_id: o CHECK do banco negou a última unidade de cota.
       if (/CHECK constraint failed/.test(message)) {

@@ -176,6 +176,19 @@ describe('POST /api/packs', () => {
     expect(user?.packs_available).toBe(2)
   })
 
+  it('increments packs_since_hit relative to the stored value', async () => {
+    await seedUser({ packs_available: 6, last_refill_date: '2026-09-16', packs_since_hit: 2 })
+    const a = (await (await open('pack-0012')).json()) as PackResponse
+    // Simula outra abertura que já incrementou o contador no meio do caminho.
+    await env.DB.prepare('UPDATE users SET packs_since_hit = packs_since_hit + 1 WHERE id = ?')
+      .bind('u1')
+      .run()
+    const after = await env.DB.prepare('SELECT packs_since_hit FROM users WHERE id = ?')
+      .bind('u1')
+      .first<{ packs_since_hit: number }>()
+    expect(after?.packs_since_hit).toBe(a.hit ? 1 : 4)
+  })
+
   it('applies pity from the stored counter', async () => {
     await seedUser({ packs_available: 2, last_refill_date: '2026-09-16', packs_since_hit: 6 })
     const pack = (await (await open('pack-0011')).json()) as PackResponse

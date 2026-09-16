@@ -30,12 +30,13 @@ export type OpenPack = {
   openedAt: string
   cards: StoredCard[]
   hit: boolean
-  packsSinceHit: number
 }
 
 /**
  * As três escritas de uma abertura, para um único `db.batch()` (transação no D1):
  * a chave primária de `packs` rejeita repetição, o CHECK de `users.packs_available` rejeita abrir sem cota.
+ * `packs_since_hit` é atualizado de forma relativa (zera em hit, senão +1) para duas aberturas
+ * concorrentes não perderem o incremento uma da outra.
  */
 export function openPackStatements(db: D1Database, pack: OpenPack): D1PreparedStatement[] {
   const insertPack = db
@@ -55,10 +56,10 @@ export function openPackStatements(db: D1Database, pack: OpenPack): D1PreparedSt
       `UPDATE users
          SET packs_available = packs_available - 1,
              total_packs = total_packs + 1,
-             packs_since_hit = ?
+             packs_since_hit = CASE WHEN ? = 1 THEN 0 ELSE packs_since_hit + 1 END
        WHERE id = ?`,
     )
-    .bind(pack.packsSinceHit, pack.userId)
+    .bind(pack.hit ? 1 : 0, pack.userId)
   const owned = pack.cards.map((card) =>
     db
       .prepare(
