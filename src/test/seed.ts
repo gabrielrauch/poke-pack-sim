@@ -7,6 +7,15 @@ import type { CardProvider } from '../provider/types'
 
 export const TEST_TOKEN = 'test-token-0123456789abcdef'
 
+/** O plugin não isola o storage por teste: chame em `beforeEach` para começar com o banco vazio. */
+export async function resetDb(): Promise<void> {
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM packs'),
+    env.DB.prepare('DELETE FROM owned'),
+    env.DB.prepare('DELETE FROM users'),
+  ])
+}
+
 export type SeedUser = {
   id: string
   name: string
@@ -21,7 +30,7 @@ export type SeedUser = {
 /** Insere uma usuária direto no D1 (storage isolado por teste: chame em cada teste). */
 export async function seedUser(overrides: Partial<SeedUser> = {}): Promise<SeedUser> {
   const user: SeedUser = {
-    id: crypto.randomUUID(),
+    id: 'u1',
     name: 'Ela',
     token: TEST_TOKEN,
     packs_available: 3,

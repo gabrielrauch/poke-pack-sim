@@ -1,12 +1,14 @@
 import { env } from 'cloudflare:test'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { favoritesOf, findUserByTokenHash, persistRefill } from './users'
-import { seedUser } from '../test/seed'
+import { resetDb, seedUser } from '../test/seed'
 import { hashToken } from '../api/auth'
 
 const allowance = { daily: 3, cap: 6 }
 
 describe('users', () => {
+  beforeEach(resetDb)
+
   it('finds a user by token hash', async () => {
     const seeded = await seedUser({ token: 'abcdefghijklmnopqrstuvwxyz012345' })
     const user = await findUserByTokenHash(
