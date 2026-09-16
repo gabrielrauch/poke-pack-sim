@@ -13,6 +13,19 @@ const PACK_ID = /^[A-Za-z0-9_-]{8,64}$/
 
 type OpenBody = { set_id: string; pack_id: string }
 
+/** Cursor do histórico: `<opened_at ISO>|<pack_id>`, para páginas com o mesmo instante não pularem linhas. */
+const cursorOf = (row: PackRow) => `${row.opened_at}|${row.id}`
+
+function parseCursor(raw: string | undefined): { openedAt: string; id: string } | null {
+  if (raw === undefined) return null
+  const sep = raw.lastIndexOf('|')
+  const datePart = sep === -1 ? raw : raw.slice(0, sep)
+  const id = sep === -1 ? '' : raw.slice(sep + 1)
+  const time = Date.parse(datePart)
+  if (Number.isNaN(time)) return null
+  return { openedAt: new Date(time).toISOString(), id }
+}
+
 function parseBody(raw: unknown): OpenBody | null {
   if (typeof raw !== 'object' || raw === null) return null
   const { set_id, pack_id } = raw as Record<string, unknown>
@@ -129,8 +142,7 @@ export function packRoutes({ provider, now = () => new Date() }: AppDeps) {
   app.get('/api/packs', requireUser, async (c) => {
     const rawLimit = Number(c.req.query('limit') ?? '30')
     const limit = Number.isInteger(rawLimit) ? Math.min(Math.max(rawLimit, 1), 100) : 30
-    const rawBefore = c.req.query('before') ?? null
-    const before = rawBefore !== null && !Number.isNaN(Date.parse(rawBefore)) ? rawBefore : null
+    const before = parseCursor(c.req.query('before'))
     const rows = await listPacks(c.env.DB, c.get('user').id, limit + 1, before)
     const page = rows.slice(0, limit)
     c.header('Cache-Control', 'private, no-store')
@@ -142,7 +154,7 @@ export function packRoutes({ provider, now = () => new Date() }: AppDeps) {
         hit: row.hit === 1,
         cards: JSON.parse(row.cards) as StoredCard[],
       })),
-      next_before: rows.length > limit ? page[page.length - 1]!.opened_at : null,
+      next_before: rows.length > limit ? cursorOf(page[page.length - 1]!) : null,
     })
   })
 

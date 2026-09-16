@@ -42,9 +42,20 @@ export async function persistRefill(
   const state = { packsAvailable: user.packs_available, lastRefillDate: user.last_refill_date }
   const next = applyRefill(state, today, allowance)
   if (next === state) return user
-  await db
-    .prepare('UPDATE users SET packs_available = ?, last_refill_date = ? WHERE id = ?')
-    .bind(next.packsAvailable, next.lastRefillDate, user.id)
+  // Condicional na data que a chamada viu: duas requisições no mesmo dia não recarregam duas vezes.
+  const { meta } = await db
+    .prepare(
+      'UPDATE users SET packs_available = ?, last_refill_date = ? WHERE id = ? AND last_refill_date IS ?',
+    )
+    .bind(next.packsAvailable, next.lastRefillDate, user.id, user.last_refill_date)
     .run()
+  if (meta.changes === 0) {
+    // Outra requisição recarregou antes: a linha do banco é a verdade.
+    const fresh = await db
+      .prepare('SELECT * FROM users WHERE id = ?')
+      .bind(user.id)
+      .first<UserRow>()
+    return fresh ?? user
+  }
   return { ...user, packs_available: next.packsAvailable, last_refill_date: next.lastRefillDate }
 }

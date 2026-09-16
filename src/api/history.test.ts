@@ -37,7 +37,7 @@ describe('GET /api/packs', () => {
     const first = (await (await app().request('/api/packs?limit=2', auth(), env)).json()) as History
     expect(first.packs.map((p) => p.pack_id)).toEqual(['p5', 'p4'])
     expect(first.packs[0]).toMatchObject({ set_id: 'sv03.5', hit: false, cards: [{ n: '001' }] })
-    expect(first.next_before).toBe('2026-09-14T12:00:00.000Z')
+    expect(first.next_before).toBe('2026-09-14T12:00:00.000Z|p4')
 
     const second = (await (
       await app().request(`/api/packs?limit=2&before=${first.next_before}`, auth(), env)
@@ -50,6 +50,27 @@ describe('GET /api/packs', () => {
     ).json()) as History
     expect(last.packs.map((p) => p.pack_id)).toEqual(['p1'])
     expect(last.next_before).toBeNull()
+  })
+
+  it('does not skip packs that share the same opened_at', async () => {
+    await seedUser()
+    for (const id of ['a', 'b', 'c']) await insertPack(id, '2026-09-16T12:00:00.000Z')
+    const first = (await (await app().request('/api/packs?limit=2', auth(), env)).json()) as History
+    expect(first.packs.map((p) => p.pack_id)).toEqual(['c', 'b'])
+    const rest = (await (
+      await app().request(`/api/packs?limit=2&before=${first.next_before}`, auth(), env)
+    ).json()) as History
+    expect(rest.packs.map((p) => p.pack_id)).toEqual(['a'])
+  })
+
+  it('normalizes a non-ISO cursor before comparing', async () => {
+    await seedUser()
+    await insertPack('old', '2026-01-01T00:00:00.000Z')
+    await insertPack('new', '2026-09-16T12:00:00.000Z')
+    const res = (await (
+      await app().request('/api/packs?before=2026/06/01', auth(), env)
+    ).json()) as History
+    expect(res.packs.map((p) => p.pack_id)).toEqual(['old'])
   })
 
   it('clamps limit and ignores a malformed cursor', async () => {

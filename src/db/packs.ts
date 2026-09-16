@@ -84,16 +84,19 @@ export async function listPacks(
   db: D1Database,
   userId: string,
   limit: number,
-  before: string | null,
+  before: { openedAt: string; id: string } | null,
 ): Promise<PackRow[]> {
+  const openedAt = before?.openedAt ?? null
+  const id = before?.id ?? null
   const { results } = await db
     .prepare(
       `SELECT * FROM packs
-        WHERE user_id = ? AND (? IS NULL OR opened_at < ?)
+        WHERE user_id = ?
+          AND (? IS NULL OR opened_at < ? OR (opened_at = ? AND id < ?))
         ORDER BY opened_at DESC, id DESC
         LIMIT ?`,
     )
-    .bind(userId, before, before, limit)
+    .bind(userId, openedAt, openedAt, openedAt, id, limit)
     .all<PackRow>()
   return results
 }
