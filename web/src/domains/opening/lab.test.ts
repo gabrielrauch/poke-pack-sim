@@ -9,7 +9,7 @@ it('pacote falso: 5 cartas reais do sv03.5, uma reverse, a última no tier pedid
   expect(pack.filter((c) => c.reverse)).toHaveLength(1)
   expect(new Set(pack.map((c) => c.n)).size).toBe(5)
   for (const c of pack) expect(c.img).toBe(`https://assets.tcgdex.net/pt/sv/sv03.5/${c.n}`)
-  expect(LAB_ART.logo).toBe('https://assets.tcgdex.net/pt/sv/sv03.5/logo.png')
+  expect(LAB_ART.logo).toBe('/api/img/pt/sv/sv03.5/logo.png')
 })
 
 it('tier pela URL, com padrão special_illustration_rare', () => {

@@ -32,7 +32,14 @@ export const TIER_LABEL: Record<Tier, string> = {
 
 export type ImageSize = 'low' | 'high'
 
+const IMAGE_ORIGIN = 'https://assets.tcgdex.net'
+
+/** URL do CDN do TCGdex → passthrough do Worker (`GET /api/img/*`), mesma origem: o CDN manda CORS duplicado. */
+export function proxiedImage(url: string): string {
+  return url.startsWith(IMAGE_ORIGIN) ? `/api/img${url.slice(IMAGE_ORIGIN.length)}` : url
+}
+
 /** `img` é a URL base do TCGdex sem extensão (§7.2: `low.webp` em grades, `high.webp` nas texturas). */
 export function cardImage(img: string | null, size: ImageSize): string | null {
-  return img ? `${img}/${size}.webp` : null
+  return img ? proxiedImage(`${img}/${size}.webp`) : null
 }

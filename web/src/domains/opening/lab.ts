@@ -1,4 +1,4 @@
-import type { Tier } from '../catalog/model'
+import { proxiedImage, type Tier } from '../catalog/model'
 import type { PackCard } from '../packs/model'
 import type { PackArt } from './engine/OpeningScene'
 
@@ -34,7 +34,11 @@ const LAST: Record<LabTier, PackCard> = {
 }
 
 export const LAB_TIERS = Object.keys(LAST) as LabTier[]
-export const LAB_ART: PackArt = { name: '151', subtitle: '5 cartas', logo: `${IMG}/logo.png` }
+export const LAB_ART: PackArt = {
+  name: '151',
+  subtitle: '5 cartas',
+  logo: proxiedImage(`${IMG}/logo.png`),
+}
 
 /** Dados falsos com imagens reais: 3 comuns/incomuns, 1 reverse, o slot raro por último. */
 export function labPack(last: LabTier): PackCard[] {
