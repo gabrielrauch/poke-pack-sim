@@ -3,6 +3,7 @@ import { PackError } from '../pack'
 import { ProviderError } from '../provider/errors'
 import { SET_ID, type AppDeps, type AppEnv } from './env'
 import { meRoutes } from './me'
+import { packRoutes } from './packs'
 
 export type { AppDeps, AppEnv } from './env'
 
@@ -25,6 +26,7 @@ export function createApp(deps: AppDeps) {
   })
 
   app.route('/', meRoutes(deps))
+  app.route('/', packRoutes(deps))
 
   app.notFound((c) => c.json({ error: 'NOT_FOUND' }, 404))
 
