@@ -8,5 +8,6 @@ Simulador de pacotes de Pokémon TCG: Cloudflare Worker (Hono + D1) servindo uma
 - `pnpm dev:web` — Vite com HMR em http://localhost:5173 (proxy `/api` para 8787)
 - `pnpm build` — build da PWA
 - `pnpm test` — vitest (projects `node` e `workers`)
+- `pnpm test:coverage` — cobertura de `src/pack` (exige 100%)
 - `pnpm check` — formatação, tipos e testes
 - `pnpm deploy` — build + `wrangler deploy`
