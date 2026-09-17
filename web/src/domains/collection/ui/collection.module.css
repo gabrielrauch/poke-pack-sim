@@ -47,7 +47,7 @@
 }
 .missing img {
   filter: brightness(0);
-  opacity: 0.3;
+  opacity: 0.45;
 }
 .backdrop {
   position: fixed;
@@ -94,7 +94,7 @@
   color: #2a1e8a;
   cursor: pointer;
 }
-.sheet:focus,
+.sheet:focus-visible,
 .close:focus-visible {
   outline: 3px solid var(--rose);
   outline-offset: 3px;

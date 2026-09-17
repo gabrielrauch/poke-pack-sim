@@ -47,15 +47,28 @@ export default defineConfig({
             },
           },
           {
-            // Álbum e histórico offline: catálogo, coleção, perfil e páginas do histórico (só GET; POST nunca).
-            urlPattern: ({ url }) =>
-              /^\/api\/(catalog|collection)\//.test(url.pathname) ||
-              url.pathname === '/api/me' ||
-              url.pathname === '/api/packs',
+            // Catálogo (207 cartas, muda raramente): cache primeiro, revalida atrás (§7.2).
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/catalog/'),
             method: 'GET',
             handler: 'StaleWhileRevalidate',
             options: {
+              cacheName: 'api-catalog',
+              expiration: { maxEntries: 5, maxAgeSeconds: 30 * 24 * 3600 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+          {
+            // Dados dela mudam a cada pacote: rede primeiro (cota, álbum e histórico sempre atuais),
+            // cache só quando a rede falha (álbum offline, §7.2). Só GET; o POST de abrir nunca é cacheado.
+            urlPattern: ({ url }) =>
+              url.pathname.startsWith('/api/collection/') ||
+              url.pathname === '/api/me' ||
+              url.pathname === '/api/packs',
+            method: 'GET',
+            handler: 'NetworkFirst',
+            options: {
               cacheName: 'api-data',
+              networkTimeoutSeconds: 5,
               expiration: { maxEntries: 30, maxAgeSeconds: 30 * 24 * 3600 },
               cacheableResponse: { statuses: [200] },
             },
