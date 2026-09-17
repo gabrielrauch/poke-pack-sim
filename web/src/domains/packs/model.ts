@@ -1,3 +1,4 @@
+import recipe from '../../../../src/pack/recipes/sv.json'
 import { ApiError } from '../../shared/lib/http'
 import type { Tier } from '../catalog/model'
 
@@ -100,4 +101,74 @@ export function againLabel(packsAvailable: number): string {
 export function packsLeftText(packsAvailable: number): string {
   if (packsAvailable <= 0) return 'Último por agora'
   return packsAvailable === 1 ? '1 pacote restante' : `${packsAvailable} pacotes restantes`
+}
+
+const ALLOWANCE = recipe.allowance
+
+export function quotaText(packsAvailable: number): string {
+  if (packsAvailable <= 0) return 'Sem pacotes agora'
+  return packsAvailable === 1 ? '1 pacote para abrir' : `${packsAvailable} pacotes para abrir`
+}
+
+/** "Mais 25 às 21:00", "Volta às 21:00" (sem pacotes) ou "Cota cheia" (recarga não acrescenta nada). */
+export function refillText(
+  nextRefillAt: string,
+  packsAvailable: number,
+  timeZone?: string,
+): string {
+  const gain = Math.min(ALLOWANCE.amount, ALLOWANCE.cap - packsAvailable)
+  if (gain <= 0) return 'Cota cheia'
+  const at = formatTime(nextRefillAt, timeZone)
+  return packsAvailable <= 0 ? `Volta às ${at}` : `Mais ${gain} às ${at}`
+}
+
+export function openedCountText(total: number): string {
+  if (total <= 0) return 'Nenhum pacote aberto'
+  return total === 1 ? '1 pacote aberto' : `${total} pacotes abertos`
+}
+
+/** Item de `GET /api/packs` (§5). `cards` é o que foi gravado na abertura; nunca depende do provider. */
+export type HistoryPack = {
+  pack_id: string
+  set_id: string
+  opened_at: string
+  hit: boolean
+  cards: PackCard[]
+}
+export type HistoryPage = { packs: HistoryPack[]; next_before: string | null }
+
+/** Dia do calendário no fuso, como `AAAA-MM-DD`. */
+function dayKey(d: Date, timeZone?: string): string {
+  const opts: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit' }
+  if (timeZone) opts.timeZone = timeZone
+  return new Intl.DateTimeFormat('en-CA', opts).format(d)
+}
+
+/** Véspera de um `dayKey` pelo calendário (e não 24 h antes: no horário de verão dá outro dia). */
+function previousDay(key: string): string {
+  const [y, m, d] = key.split('-').map(Number) as [number, number, number]
+  return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10)
+}
+
+/** "Hoje, 18:05", "Ontem, 22:05" ou "1 de set., 12:00". */
+export function openedAtText(iso: string, now = new Date(), timeZone?: string): string {
+  const d = new Date(iso)
+  const time = formatTime(iso, timeZone)
+  const day = dayKey(d, timeZone)
+  if (day === dayKey(now, timeZone)) return `Hoje, ${time}`
+  if (day === previousDay(dayKey(now, timeZone))) return `Ontem, ${time}`
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
+  if (timeZone) opts.timeZone = timeZone
+  return `${new Intl.DateTimeFormat('pt-BR', opts).format(d)}, ${time}`
+}
+
+export function historyPacks(pages: readonly HistoryPage[] | undefined): HistoryPack[] {
+  return pages ? pages.flatMap((p) => p.packs) : []
+}
+
+export function findPack(
+  pages: readonly HistoryPage[] | undefined,
+  id: string,
+): HistoryPack | null {
+  return historyPacks(pages).find((p) => p.pack_id === id) ?? null
 }

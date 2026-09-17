@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import { ApiError } from '../shared/lib/http'
-import { shouldRetry } from './query'
+import { createQueryClient, shouldRetry } from './query'
 
 it('rede caída e 503 tentam de novo até 2 vezes', () => {
   expect(shouldRetry(0, new TypeError('Failed to fetch'))).toBe(true)
@@ -13,4 +13,8 @@ it('outros erros da API são definitivos', () => {
   expect(shouldRetry(0, new ApiError(401, 'UNAUTHORIZED', null))).toBe(false)
   expect(shouldRetry(0, new ApiError(409, 'NO_PACKS', null))).toBe(false)
   expect(shouldRetry(0, new ApiError(500, 'INTERNAL', null))).toBe(false)
+})
+
+it('queries rodam offline-first para o service worker responder', () => {
+  expect(createQueryClient().getDefaultOptions().queries?.networkMode).toBe('offlineFirst')
 })

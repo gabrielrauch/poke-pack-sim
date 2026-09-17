@@ -3,7 +3,6 @@ import { MS } from '../../../shared/lib/motion'
 import {
   bodyOutline,
   guidePhase,
-  mulberry32,
   packZ,
   PUFF,
   SEAL_BOTTOM,
@@ -74,19 +73,5 @@ describe('volume do pacote', () => {
     expect(packZ(0.5, 0.3)).toBeCloseTo(packZ(0.5, 0.7))
     expect(packZ(0.2, 0.5)).toBeLessThan(packZ(0.35, 0.5))
     expect(packZ(0.35, 0.5)).toBeLessThan(packZ(0.5, 0.5))
-  })
-})
-
-describe('mulberry32', () => {
-  it('é determinístico por seed e fica em [0, 1)', () => {
-    const a = mulberry32(151)
-    const b = mulberry32(151)
-    const xs = Array.from({ length: 5 }, () => a())
-    expect(xs).toEqual(Array.from({ length: 5 }, () => b()))
-    for (const x of xs) {
-      expect(x).toBeGreaterThanOrEqual(0)
-      expect(x).toBeLessThan(1)
-    }
-    expect(mulberry32(152)()).not.toBe(xs[0])
   })
 })

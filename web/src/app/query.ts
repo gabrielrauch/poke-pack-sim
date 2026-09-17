@@ -10,7 +10,13 @@ export function shouldRetry(count: number, err: unknown): boolean {
 export function createQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: shouldRetry, retryDelay: 1000, refetchOnWindowFocus: false },
+      queries: {
+        retry: shouldRetry,
+        retryDelay: 1000,
+        refetchOnWindowFocus: false,
+        // Offline a query ainda roda uma vez: o service worker responde catálogo, coleção e histórico (§7.2).
+        networkMode: 'offlineFirst',
+      },
     },
   })
 }

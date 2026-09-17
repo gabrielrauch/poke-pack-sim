@@ -1,10 +1,12 @@
-import { mulberry32 } from './packMath'
+import { mulberry32 } from './prng'
 
 /**
  * Arte procedural do booster (§3: `boosters` vem nulo). Inspirada no 151: foil branco, silhuetas
  * coloridas, Mew com Pokébola, logotipo no topo, faixa vermelha. Só canvas 2D; sem three, sem React.
  */
 export type PackArtSource = { name: string; subtitle: string; logo: HTMLImageElement | null }
+
+export const PACK_ASPECT = 1.62
 
 export const FONT = "'Fredoka', system-ui, sans-serif"
 
@@ -351,4 +353,12 @@ function drawEdges(ctx: Ctx, w: number, h: number): void {
   r.addColorStop(1, 'rgba(0,0,0,0)')
   ctx.fillStyle = r
   ctx.fillRect(w * 0.92, 0, w * 0.08, h)
+}
+
+/** Frente inteira e chapada (Início): arte + costuras de cima e de baixo, os mesmos números do Pack.ts. */
+export function drawPackFront(ctx: Ctx, w: number, h: number, art: PackArtSource): void {
+  drawPackArt(ctx, w, h, art)
+  const strip = h * 0.21
+  drawSeal(ctx, w, strip * 0.04, strip * 0.14, strip * 0.2)
+  drawSeal(ctx, w, h * 0.962, h * 0.03, h * 0.955)
 }

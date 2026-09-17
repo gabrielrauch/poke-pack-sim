@@ -1,6 +1,6 @@
 import { MS } from '../../../shared/lib/motion'
 
-export const PACK_ASPECT = 1.62
+export { PACK_ASPECT } from '../../../shared/lib/packArt'
 /** A tira ocupa os 21% do topo. */
 export const STRIP_FRAC = 0.21
 
@@ -17,18 +17,6 @@ export function packZ(u: number, v: number): number {
   const t = (v - SEAL_TOP) / (SEAL_BOTTOM - SEAL_TOP)
   if (t <= 0 || t >= 1 || u <= 0 || u >= 1) return 0
   return PUFF * Math.sqrt(Math.sin(Math.PI * u)) * Math.sin(Math.PI * t) ** 0.7
-}
-
-/** PRNG determinístico (mulberry32) para a arte procedural: o mesmo pacote sai sempre igual. */
-export function mulberry32(seed: number): () => number {
-  let a = seed >>> 0
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0
-    let t = a
-    t = Math.imul(t ^ (t >>> 15), t | 1)
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
 }
 
 /** Rasgo (§8.5): dentes grossos. */

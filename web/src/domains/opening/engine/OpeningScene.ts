@@ -10,6 +10,7 @@ import {
   WebGLRenderer,
   type Texture,
 } from 'three'
+import { loadImage } from '../../../shared/lib/image'
 import { EASE, MS } from '../../../shared/lib/motion'
 import { cardImage, type PackArt } from '../../catalog/model'
 import type { PackCard } from '../../packs/model'
@@ -42,7 +43,7 @@ import {
 } from './sequence'
 import { tearBegin, tearMove, tearRelease, type Tear } from './tear'
 import { TearLine } from './TearLine'
-import { canvasTexture, loadCardTextures, loadImage, studioEnvironment } from './textures'
+import { canvasTexture, loadCardTextures, studioEnvironment } from './textures'
 import { createTilt, setTiltTarget, updateTilt } from './tilt'
 import { Tweens } from './tween'
 

@@ -1,9 +1,14 @@
+import { QueryClientProvider } from '@tanstack/react-query'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it } from 'vitest'
 import { App } from './App'
+import { createQueryClient } from './query'
 
-it('renders the home with the link to open a pack', () => {
-  const html = renderToStaticMarkup(<App />)
-  expect(html).toContain('pack-sim')
-  expect(html).toContain('href="/abrir"')
+it('sem token salvo mostra a tela de colar o link', () => {
+  const html = renderToStaticMarkup(
+    <QueryClientProvider client={createQueryClient()}>
+      <App />
+    </QueryClientProvider>,
+  )
+  expect(html).toContain('Colar link de acesso')
 })

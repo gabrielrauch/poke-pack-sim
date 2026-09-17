@@ -1,41 +1,82 @@
-import { lazy, Suspense } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { lazy, Suspense, useEffect, type ReactNode } from 'react'
+import { useMe, useSession } from '../domains/auth/hooks'
+import { isUnauthorized } from '../domains/auth/model'
+import { saveSession } from '../domains/auth/session'
+import { AccessScreen } from '../domains/auth/ui/AccessScreen'
+import HomeScreen from '../domains/packs/ui/HomeScreen'
+import { PATHS, usePathname } from '../shared/lib/router'
+import { Link } from '../shared/ui/Link'
+import sh from '../shared/ui/shared.module.css'
+import { TabBar } from '../shared/ui/TabBar'
 import s from './app.module.css'
+import { prefetchOpening } from './prefetch'
+import { matchRoute } from './router'
 
 /** three e a engine só entram nos chunks destas telas (§8.11); álbum e histórico nunca carregam Three. */
 const OpenScreen = lazy(() => import('../domains/opening/ui/OpenScreen'))
 const LabScreen = lazy(() => import('../domains/opening/ui/LabScreen'))
-
-const pathname = () => (typeof window === 'undefined' ? '/' : window.location.pathname)
+const AlbumScreen = lazy(() => import('../domains/collection/ui/AlbumScreen'))
+const HistoryScreen = lazy(() => import('../domains/packs/ui/HistoryScreen'))
+const PackScreen = lazy(() => import('../domains/packs/ui/PackScreen'))
 
 export function App() {
-  const path = pathname()
-  if (path === '/abrir') {
-    return (
-      <Suspense fallback={<Loading />}>
-        <OpenScreen />
-      </Suspense>
-    )
+  const route = matchRoute(usePathname())
+  const token = useSession()
+  const me = useMe(route.name === 'lab' ? null : token)
+  const queryClient = useQueryClient()
+  // Da Home, o chunk da abertura baixa em idle (§8.11); sem token a tela é a de acesso.
+  useEffect(() => {
+    if (route.name === 'home' && token) prefetchOpening()
+  }, [route.name, token])
+  // Link novo: nada da conta anterior fica na memória (as chaves não levam o usuário).
+  const enter = (t: string) => {
+    queryClient.clear()
+    saveSession(t)
   }
-  if (path === '/lab') {
-    return (
-      <Suspense fallback={<Loading />}>
-        <LabScreen />
-      </Suspense>
-    )
-  }
-  return <Home />
+
+  if (route.name === 'lab') return <Lazy screen={<LabScreen />} />
+  if (!token) return <AccessScreen reason="missing" onSubmit={enter} />
+  if (isUnauthorized(me.error)) return <AccessScreen reason="invalid" onSubmit={enter} />
+  if (route.name === 'open') return <Lazy screen={<OpenScreen />} />
+  return (
+    <>
+      <Screen route={route} />
+      <TabBar />
+    </>
+  )
 }
 
-/** Placeholder até a etapa 7 (Início de verdade, com contador e hora da recarga). */
-function Home() {
+function Screen({ route }: { route: ReturnType<typeof matchRoute> }) {
+  switch (route.name) {
+    case 'home':
+      return <HomeScreen />
+    case 'album':
+      return <Lazy screen={<AlbumScreen />} />
+    case 'history':
+      return <Lazy screen={<HistoryScreen />} />
+    case 'pack':
+      return <Lazy screen={<PackScreen id={route.id} />} />
+    case 'missing':
+      return <NotFound />
+  }
+}
+
+function NotFound() {
   return (
-    <main className={s.home}>
-      <h1>pack-sim</h1>
-      <a className={s.cta} href="/abrir">
-        Abrir pacote
-      </a>
+    <main className={sh.screen}>
+      <p className={sh.note}>Essa página não existe.</p>
+      <p style={{ textAlign: 'center' }}>
+        <Link className={sh.btn} to={PATHS.home}>
+          Ir para o início
+        </Link>
+      </p>
     </main>
   )
+}
+
+function Lazy({ screen }: { screen: ReactNode }) {
+  return <Suspense fallback={<Loading />}>{screen}</Suspense>
 }
 
 function Loading() {

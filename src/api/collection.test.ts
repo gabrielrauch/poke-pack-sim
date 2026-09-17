@@ -31,8 +31,8 @@ describe('GET /api/collection/:set', () => {
     expect(res.status).toBe(200)
     expect(res.headers.get('cache-control')).toBe('private, no-store')
     expect(await res.json()).toEqual({
-      '025': { normal: 2, reverse: 1 },
-      '001': { normal: 0, reverse: 1 },
+      '025': { normal: 2, reverse: 1, first: '2026-09-16T12:00:00.000Z' },
+      '001': { normal: 0, reverse: 1, first: '2026-09-16T12:00:00.000Z' },
     })
   })
 

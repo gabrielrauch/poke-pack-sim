@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
-import { openPack } from './api'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
+import { fetchHistory, openPack } from './api'
 
 /**
  * A abertura é uma query pela chave `pack_id`: como a API é idempotente por id, `refetch()` é a
@@ -11,5 +11,14 @@ export function useOpenPack(setId: string, packId: string) {
     queryFn: () => openPack(setId, packId),
     staleTime: Infinity,
     refetchOnReconnect: false,
+  })
+}
+
+export function useHistory() {
+  return useInfiniteQuery({
+    queryKey: ['history'],
+    queryFn: ({ pageParam }) => fetchHistory(pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.next_before,
   })
 }
