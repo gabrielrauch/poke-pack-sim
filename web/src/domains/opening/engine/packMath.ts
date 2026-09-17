@@ -31,28 +31,25 @@ export function mulberry32(seed: number): () => number {
   }
 }
 
-/** Costuras (topo da tira, fundo do corpo): corte quase reto com micro-serrilhado, como no booster real. */
-export const SEAL_TEETH = 60
-/** Profundidade dos dentes da costura, em fração da altura do pacote. */
-export const SEAL_DEPTH = 0.012
 /** Rasgo (§8.5): dentes grossos. */
 export const TEAR_TEETH = 18
 /** Pontos (x, y) em fração 0..1, y para baixo como no canvas. */
 export type Outline = Array<[number, number]>
 
-/** Corpo: boca rasgada entre 18% e 21% no topo (§8.3) e costura fina embaixo. */
+/** Corpo: boca rasgada entre 18% e 21% no topo (§8.3); embaixo o corte da costura é reto. */
 export function bodyOutline(): Outline {
   const pts: Outline = []
   for (let i = 0; i <= TEAR_TEETH; i++) pts.push([i / TEAR_TEETH, i % 2 ? 0.21 : 0.18])
-  for (let i = SEAL_TEETH; i >= 0; i--) pts.push([i / SEAL_TEETH, i % 2 ? 1 - SEAL_DEPTH : 1])
+  pts.push([1, 1], [0, 1])
   return pts
 }
 
-/** Tira: costura fina no topo (em fração da própria altura); embaixo reta, ou rasgada entre 84% e 100% (§8.5). */
+/** Tira: corte reto no topo; embaixo reta, ou rasgada entre 84% e 100% (§8.5). */
 export function stripOutline(torn: boolean): Outline {
-  const pts: Outline = []
-  const d = SEAL_DEPTH / STRIP_FRAC
-  for (let i = 0; i <= SEAL_TEETH; i++) pts.push([i / SEAL_TEETH, i % 2 ? 0 : d])
+  const pts: Outline = [
+    [0, 0],
+    [1, 0],
+  ]
   if (torn) for (let i = TEAR_TEETH; i >= 0; i--) pts.push([i / TEAR_TEETH, i % 2 ? 0.84 : 1])
   else pts.push([1, 1], [0, 1])
   return pts

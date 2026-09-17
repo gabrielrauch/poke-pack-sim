@@ -7,37 +7,35 @@ import {
   packZ,
   PUFF,
   SEAL_BOTTOM,
-  SEAL_DEPTH,
-  SEAL_TEETH,
   SEAL_TOP,
-  STRIP_FRAC,
   stripOutline,
   sweepPhase,
   TEAR_TEETH,
 } from './packMath'
 
-describe('contornos serrilhados (§8.3)', () => {
-  it('corpo: boca rasgada com 18 dentes entre 18% e 21%; costura fina com 60 dentes embaixo', () => {
+describe('contornos (§8.3)', () => {
+  it('corpo: boca rasgada com 18 dentes entre 18% e 21%; costura reta embaixo', () => {
     const pts = bodyOutline()
-    expect(pts).toHaveLength(TEAR_TEETH + 1 + SEAL_TEETH + 1)
+    expect(pts).toHaveLength(TEAR_TEETH + 3)
     expect(pts[0]).toEqual([0, 0.18])
     expect(pts[1]![1]).toBe(0.21)
     expect(pts[TEAR_TEETH]).toEqual([1, 0.18])
     expect(pts[TEAR_TEETH + 1]).toEqual([1, 1])
-    expect(pts[TEAR_TEETH + 2]![1]).toBeCloseTo(1 - SEAL_DEPTH)
-    expect(pts[pts.length - 1]).toEqual([0, 1])
+    expect(pts[TEAR_TEETH + 2]).toEqual([0, 1])
   })
 
-  it('tira: costura fina no topo; inteira embaixo, ou rasgada com 18 dentes entre 84% e 100%', () => {
-    const intact = stripOutline(false)
-    expect(intact).toHaveLength(SEAL_TEETH + 3)
-    expect(intact[0]).toEqual([0, SEAL_DEPTH / STRIP_FRAC])
-    expect(intact[1]).toEqual([1 / SEAL_TEETH, 0])
-    expect(intact[SEAL_TEETH + 1]).toEqual([1, 1])
+  it('tira: reta no topo; inteira embaixo, ou rasgada com 18 dentes entre 84% e 100%', () => {
+    expect(stripOutline(false)).toEqual([
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [0, 1],
+    ])
     const torn = stripOutline(true)
-    expect(torn).toHaveLength(SEAL_TEETH + 1 + TEAR_TEETH + 1)
-    expect(torn[SEAL_TEETH + 1]![1]).toBe(1)
-    expect(torn[SEAL_TEETH + 2]![1]).toBe(0.84)
+    expect(torn).toHaveLength(TEAR_TEETH + 3)
+    expect(torn[2]).toEqual([1, 1])
+    expect(torn[3]![1]).toBe(0.84)
+    expect(torn[torn.length - 1]).toEqual([0, 1])
   })
 })
 

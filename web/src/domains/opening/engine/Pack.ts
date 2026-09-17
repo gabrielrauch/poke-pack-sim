@@ -1,6 +1,6 @@
 import { Group, Mesh, MeshPhysicalMaterial, type PlaneGeometry, type Texture } from 'three'
 import { MS } from '../../../shared/lib/motion'
-import { drawCrimp, drawMouth, drawPackArt, type PackArtSource } from './packArt'
+import { drawMouth, drawPackArt, drawSeal, type PackArtSource } from './packArt'
 import { packGeometry } from './packGeometry'
 import {
   bodyOutline,
@@ -71,14 +71,14 @@ export class Pack {
     this.bodyMap = foilTexture(TEX_W, texH, maxAnisotropy, (ctx, w, h) => {
       clipOutline(ctx, bodyOutline(), w, h)
       ctx.drawImage(full, 0, 0)
-      drawCrimp(ctx, 0, h * 0.955, w, h * 0.045)
+      drawSeal(ctx, w, h * 0.962, h * 0.03, h * 0.955)
       drawMouth(ctx, w, h, STRIP_FRAC)
     })
     const stripTexture = (torn: boolean) =>
       foilTexture(TEX_W, stripH, maxAnisotropy, (ctx, w, h) => {
         clipOutline(ctx, stripOutline(torn), w, h)
         ctx.drawImage(full, 0, 0, w, h, 0, 0, w, h)
-        drawCrimp(ctx, 0, 0, w, h * 0.2)
+        drawSeal(ctx, w, h * 0.04, h * 0.14, h * 0.2)
       })
     this.stripIntact = stripTexture(false)
     this.stripTorn = stripTexture(true)

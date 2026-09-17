@@ -30,18 +30,37 @@ export function drawPackArt(ctx: Ctx, w: number, h: number, art: PackArtSource):
   drawEdges(ctx, w, h)
 }
 
-/** Costura prensada: foil liso (sem arte por baixo) com ranhuras verticais finas e sutis, o relevo do crimp. */
-export function drawCrimp(ctx: Ctx, x: number, y: number, w: number, h: number): void {
-  const g = ctx.createLinearGradient(0, y, 0, y + h)
-  g.addColorStop(0, '#eef0f6')
-  g.addColorStop(1, '#dde1ea')
-  ctx.fillStyle = g
-  ctx.fillRect(x, y, w, h)
-  const step = w / 90
-  ctx.fillStyle = 'rgba(255,255,255,.5)'
-  for (let i = 0; i < w; i += step) ctx.fillRect(x + i, y, step * 0.5, h)
-  ctx.fillStyle = 'rgba(40,40,70,.1)'
-  for (let i = step * 0.5; i < w; i += step) ctx.fillRect(x + i, y, step * 0.5, h)
+/**
+ * Costura prensada como no booster real: a arte continua por baixo, uma fileira de barrinhas verticais
+ * em relevo (cápsulas com luz de um lado e sombra do outro) e uma linha cinza horizontal na dobra.
+ */
+export function drawSeal(ctx: Ctx, w: number, barsY: number, barsH: number, lineY: number): void {
+  const bw = w / 85
+  const step = w / 51
+  const r = bw / 2
+  const o = w / 500
+  ctx.save()
+  ctx.lineWidth = Math.max(1, w / 700)
+  for (let x = step * 0.6; x + bw < w; x += step) {
+    ctx.strokeStyle = 'rgba(255,255,255,.7)'
+    ctx.beginPath()
+    ctx.roundRect(x - o, barsY - o, bw, barsH, r)
+    ctx.stroke()
+    ctx.strokeStyle = 'rgba(20,20,40,.35)'
+    ctx.beginPath()
+    ctx.roundRect(x + o, barsY + o, bw, barsH, r)
+    ctx.stroke()
+    ctx.fillStyle = 'rgba(255,255,255,.14)'
+    ctx.beginPath()
+    ctx.roundRect(x, barsY, bw, barsH, r)
+    ctx.fill()
+  }
+  const lh = Math.max(2, w / 260)
+  ctx.fillStyle = 'rgba(30,30,50,.45)'
+  ctx.fillRect(0, lineY, w, lh)
+  ctx.fillStyle = 'rgba(255,255,255,.45)'
+  ctx.fillRect(0, lineY + lh, w, lh * 0.6)
+  ctx.restore()
 }
 
 /** Interior escuro sob a tira (aparece quando ela sai) e a sombra da dobra logo abaixo dela. */
