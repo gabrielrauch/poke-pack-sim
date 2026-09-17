@@ -20,10 +20,20 @@ export function loadSession(): string | null {
 
 /** Token colado na tela de acesso: salva, aponta o manifest e avisa `useSession`. */
 export function saveSession(t: string): void {
+  if (t !== token) void purgeUserCache()
   save(t)
   token = t
   linkManifest(t)
   listeners.forEach((l) => l())
+}
+
+/** Cache `api-data` do service worker (perfil, coleção, histórico; §7.2): é da conta anterior, fora. */
+function purgeUserCache(): Promise<boolean> {
+  try {
+    return typeof caches === 'undefined' ? Promise.resolve(false) : caches.delete('api-data')
+  } catch {
+    return Promise.resolve(false)
+  }
 }
 
 export const getToken = (): string | null => token

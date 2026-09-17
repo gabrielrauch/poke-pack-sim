@@ -137,10 +137,17 @@ export type HistoryPack = {
 }
 export type HistoryPage = { packs: HistoryPack[]; next_before: string | null }
 
+/** Dia do calendário no fuso, como `AAAA-MM-DD`. */
 function dayKey(d: Date, timeZone?: string): string {
-  const opts: Intl.DateTimeFormatOptions = { dateStyle: 'short' }
+  const opts: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit' }
   if (timeZone) opts.timeZone = timeZone
-  return new Intl.DateTimeFormat('pt-BR', opts).format(d)
+  return new Intl.DateTimeFormat('en-CA', opts).format(d)
+}
+
+/** Véspera de um `dayKey` pelo calendário (e não 24 h antes: no horário de verão dá outro dia). */
+function previousDay(key: string): string {
+  const [y, m, d] = key.split('-').map(Number) as [number, number, number]
+  return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10)
 }
 
 /** "Hoje, 18:05", "Ontem, 22:05" ou "1 de set., 12:00". */
@@ -149,7 +156,7 @@ export function openedAtText(iso: string, now = new Date(), timeZone?: string): 
   const time = formatTime(iso, timeZone)
   const day = dayKey(d, timeZone)
   if (day === dayKey(now, timeZone)) return `Hoje, ${time}`
-  if (day === dayKey(new Date(now.getTime() - 86_400_000), timeZone)) return `Ontem, ${time}`
+  if (day === previousDay(dayKey(now, timeZone))) return `Ontem, ${time}`
   const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
   if (timeZone) opts.timeZone = timeZone
   return `${new Intl.DateTimeFormat('pt-BR', opts).format(d)}, ${time}`

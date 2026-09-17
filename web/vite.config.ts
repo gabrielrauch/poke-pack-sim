@@ -60,6 +60,7 @@ export default defineConfig({
           {
             // Dados dela mudam a cada pacote: rede primeiro (cota, álbum e histórico sempre atuais),
             // cache só quando a rede falha (álbum offline, §7.2). Só GET; o POST de abrir nunca é cacheado.
+            // O cache é por URL, sem usuário: `saveSession` apaga `api-data` ao colar um link de outra conta.
             urlPattern: ({ url }) =>
               url.pathname.startsWith('/api/collection/') ||
               url.pathname === '/api/me' ||

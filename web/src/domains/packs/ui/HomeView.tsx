@@ -22,15 +22,16 @@ export function HomeView({
   onRetry: () => void
 }) {
   const none = me !== null && me.packs_available <= 0
+  const canOpen = me !== null && me.packs_available > 0 && failure === null
   return (
     <main className={`${sh.screen} ${s.home}`}>
       <header className={`${sh.header} ${s.head}`}>
         <h1>{me ? `Olá, ${me.name}` : 'Olá'}</h1>
         <span className={sh.muted}>{me ? openedCountText(me.total_packs) : ''}</span>
       </header>
-      {none ? (
+      {!canOpen ? (
         <div className={s.packWrap}>
-          <PackPreview art={art} logo={logo} dimmed />
+          <PackPreview art={art} logo={logo} dimmed={none} />
         </div>
       ) : (
         <Link to={PATHS.open} className={s.packWrap} aria-label="Abrir pacote">

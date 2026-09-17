@@ -22,7 +22,7 @@ export function TabBar() {
           key={t.to}
           to={t.to}
           className={s.tab}
-          aria-current={path === t.to ? 'page' : undefined}
+          aria-current={path === t.to || path.startsWith(`${t.to}/`) ? 'page' : undefined}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d={t.d} />

@@ -116,6 +116,12 @@ describe('histórico (§7.1)', () => {
     expect(openedAtText('2026-09-01T15:00:00Z', now, tz)).toBe('1 de set., 12:00')
   })
 
+  it('"Ontem" é pelo calendário do fuso, mesmo na virada do horário de verão', () => {
+    // 00:30 de 9 de março em Nova York (já em EDT); 24 h antes ainda seria 7 de março.
+    const now = new Date('2026-03-09T04:30:00Z')
+    expect(openedAtText('2026-03-08T15:00:00Z', now, 'America/New_York')).toBe('Ontem, 11:00')
+  })
+
   it('achata as páginas e acha um pacote pelo id', () => {
     const pages = [
       { packs: [pack('b', '2026-09-17T21:00:00Z')], next_before: 'x' },

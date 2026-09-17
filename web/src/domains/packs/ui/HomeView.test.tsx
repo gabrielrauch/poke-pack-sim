@@ -49,4 +49,5 @@ it('erro: mostra o texto e o botão de tentar de novo', () => {
   )
   expect(html).toContain('Sem conexão')
   expect(html).toContain('Tentar de novo')
+  expect(html).not.toContain('href="/abrir"')
 })

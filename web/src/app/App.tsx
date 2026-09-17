@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { lazy, Suspense, useEffect, type ReactNode } from 'react'
 import { useMe, useSession } from '../domains/auth/hooks'
 import { isUnauthorized } from '../domains/auth/model'
@@ -23,14 +24,20 @@ export function App() {
   const route = matchRoute(usePathname())
   const token = useSession()
   const me = useMe(route.name === 'lab' ? null : token)
-  // Da Home, o chunk da abertura baixa em idle (§8.11).
+  const queryClient = useQueryClient()
+  // Da Home, o chunk da abertura baixa em idle (§8.11); sem token a tela é a de acesso.
   useEffect(() => {
-    if (route.name === 'home') prefetchOpening()
-  }, [route.name])
+    if (route.name === 'home' && token) prefetchOpening()
+  }, [route.name, token])
+  // Link novo: nada da conta anterior fica na memória (as chaves não levam o usuário).
+  const enter = (t: string) => {
+    queryClient.clear()
+    saveSession(t)
+  }
 
   if (route.name === 'lab') return <Lazy screen={<LabScreen />} />
-  if (!token) return <AccessScreen reason="missing" onSubmit={saveSession} />
-  if (isUnauthorized(me.error)) return <AccessScreen reason="invalid" onSubmit={saveSession} />
+  if (!token) return <AccessScreen reason="missing" onSubmit={enter} />
+  if (isUnauthorized(me.error)) return <AccessScreen reason="invalid" onSubmit={enter} />
   if (route.name === 'open') return <Lazy screen={<OpenScreen />} />
   return (
     <>

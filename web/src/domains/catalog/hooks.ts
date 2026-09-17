@@ -15,7 +15,12 @@ export function useCatalog(setId: string) {
 export function useImage(url: string | null) {
   return useQuery({
     queryKey: ['image', url],
-    queryFn: () => loadImage(url),
+    // `loadImage` devolve null em erro (contrato da engine); aqui vira erro para a query tentar de novo.
+    queryFn: async () => {
+      const img = await loadImage(url)
+      if (!img) throw new Error(`imagem indisponível: ${url}`)
+      return img
+    },
     enabled: url !== null,
     staleTime: Infinity,
   })
