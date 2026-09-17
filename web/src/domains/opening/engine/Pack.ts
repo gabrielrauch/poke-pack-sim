@@ -1,11 +1,18 @@
 import { Group, Mesh, MeshPhysicalMaterial, type PlaneGeometry, type Texture } from 'three'
 import { MS } from '../../../shared/lib/motion'
-import { bodyOutline, guidePhase, stripOutline, sweepPhase, type Outline } from './packMath'
+import {
+  bodyOutline,
+  guidePhase,
+  PACK_ASPECT,
+  STRIP_FRAC,
+  stripOutline,
+  sweepPhase,
+  type Outline,
+} from './packMath'
 import { canvasTexture } from './textures'
 import type { Tween, Tweens } from './tween'
 
-export const PACK_ASPECT = 1.62
-export const STRIP_FRAC = 0.21
+export { PACK_ASPECT, STRIP_FRAC }
 const FONT = "'Fredoka', system-ui, sans-serif"
 
 export type PackArt = { name: string; subtitle: string; logo: HTMLImageElement | null }

@@ -1,5 +1,36 @@
 import { MS } from '../../../shared/lib/motion'
 
+export const PACK_ASPECT = 1.62
+/** A tira ocupa os 21% do topo. */
+export const STRIP_FRAC = 0.21
+
+/** Volume da frente (fração da largura): 0 nas costuras (topo/fundo) e nas laterais, máximo no centro. */
+export const PUFF = 0.07
+export const SEAL_TOP = 0.05
+export const SEAL_BOTTOM = 0.95
+
+/**
+ * Altura z da frente em (u, v) ∈ [0,1]² (v para baixo), em fração da largura. Um travesseiro achatado:
+ * raiz em u para ombros redondos, expoente < 1 em v para um platô longo entre as costuras.
+ */
+export function packZ(u: number, v: number): number {
+  const t = (v - SEAL_TOP) / (SEAL_BOTTOM - SEAL_TOP)
+  if (t <= 0 || t >= 1 || u <= 0 || u >= 1) return 0
+  return PUFF * Math.sqrt(Math.sin(Math.PI * u)) * Math.sin(Math.PI * t) ** 0.7
+}
+
+/** PRNG determinístico (mulberry32) para a arte procedural: o mesmo pacote sai sempre igual. */
+export function mulberry32(seed: number): () => number {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
 export const TEETH = 18
 /** Pontos (x, y) em fração 0..1, y para baixo como no canvas. */
 export type Outline = Array<[number, number]>
