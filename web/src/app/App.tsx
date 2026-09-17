@@ -16,6 +16,8 @@ import { matchRoute } from './router'
 const OpenScreen = lazy(() => import('../domains/opening/ui/OpenScreen'))
 const LabScreen = lazy(() => import('../domains/opening/ui/LabScreen'))
 const AlbumScreen = lazy(() => import('../domains/collection/ui/AlbumScreen'))
+const HistoryScreen = lazy(() => import('../domains/packs/ui/HistoryScreen'))
+const PackScreen = lazy(() => import('../domains/packs/ui/PackScreen'))
 
 export function App() {
   const route = matchRoute(usePathname())
@@ -44,20 +46,13 @@ function Screen({ route }: { route: ReturnType<typeof matchRoute> }) {
       return <HomeScreen />
     case 'album':
       return <Lazy screen={<AlbumScreen />} />
+    case 'history':
+      return <Lazy screen={<HistoryScreen />} />
+    case 'pack':
+      return <Lazy screen={<PackScreen id={route.id} />} />
     case 'missing':
       return <NotFound />
-    default:
-      return <Placeholder name={route.name} />
   }
-}
-
-/** Trocado pela tela da tarefa 4. */
-function Placeholder({ name }: { name: string }) {
-  return (
-    <main className={sh.screen}>
-      <p className={sh.note}>{name}</p>
-    </main>
-  )
 }
 
 function NotFound() {

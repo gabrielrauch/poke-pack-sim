@@ -3,12 +3,16 @@ import { ApiError } from '../../shared/lib/http'
 import {
   againLabel,
   classifyOpenError,
+  findPack,
+  historyPacks,
   newPackId,
+  openedAtText,
   openedCountText,
   openFailureText,
   packsLeftText,
   quotaText,
   refillText,
+  type HistoryPack,
 } from './model'
 
 it('pack_id aceito pela API (8–64 chars de [A-Za-z0-9_-]) e único', () => {
@@ -92,5 +96,34 @@ describe('Início (§7.1)', () => {
     expect(openedCountText(0)).toBe('Nenhum pacote aberto')
     expect(openedCountText(1)).toBe('1 pacote aberto')
     expect(openedCountText(12)).toBe('12 pacotes abertos')
+  })
+})
+
+const pack = (id: string, opened_at: string): HistoryPack => ({
+  pack_id: id,
+  set_id: 'sv03.5',
+  opened_at,
+  hit: false,
+  cards: [],
+})
+
+describe('histórico (§7.1)', () => {
+  it('data relativa em pt-BR', () => {
+    const now = new Date('2026-09-17T23:30:00Z')
+    const tz = 'America/Sao_Paulo'
+    expect(openedAtText('2026-09-17T21:05:00Z', now, tz)).toBe('Hoje, 18:05')
+    expect(openedAtText('2026-09-17T01:05:00Z', now, tz)).toBe('Ontem, 22:05')
+    expect(openedAtText('2026-09-01T15:00:00Z', now, tz)).toBe('1 de set., 12:00')
+  })
+
+  it('achata as páginas e acha um pacote pelo id', () => {
+    const pages = [
+      { packs: [pack('b', '2026-09-17T21:00:00Z')], next_before: 'x' },
+      { packs: [pack('a', '2026-09-16T21:00:00Z')], next_before: null },
+    ]
+    expect(historyPacks(pages).map((p) => p.pack_id)).toEqual(['b', 'a'])
+    expect(findPack(pages, 'a')?.opened_at).toBe('2026-09-16T21:00:00Z')
+    expect(findPack(pages, 'zz')).toBeNull()
+    expect(findPack(undefined, 'a')).toBeNull()
   })
 })

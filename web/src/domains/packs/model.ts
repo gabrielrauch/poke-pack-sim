@@ -126,3 +126,42 @@ export function openedCountText(total: number): string {
   if (total <= 0) return 'Nenhum pacote aberto'
   return total === 1 ? '1 pacote aberto' : `${total} pacotes abertos`
 }
+
+/** Item de `GET /api/packs` (§5). `cards` é o que foi gravado na abertura; nunca depende do provider. */
+export type HistoryPack = {
+  pack_id: string
+  set_id: string
+  opened_at: string
+  hit: boolean
+  cards: PackCard[]
+}
+export type HistoryPage = { packs: HistoryPack[]; next_before: string | null }
+
+function dayKey(d: Date, timeZone?: string): string {
+  const opts: Intl.DateTimeFormatOptions = { dateStyle: 'short' }
+  if (timeZone) opts.timeZone = timeZone
+  return new Intl.DateTimeFormat('pt-BR', opts).format(d)
+}
+
+/** "Hoje, 18:05", "Ontem, 22:05" ou "1 de set., 12:00". */
+export function openedAtText(iso: string, now = new Date(), timeZone?: string): string {
+  const d = new Date(iso)
+  const time = formatTime(iso, timeZone)
+  const day = dayKey(d, timeZone)
+  if (day === dayKey(now, timeZone)) return `Hoje, ${time}`
+  if (day === dayKey(new Date(now.getTime() - 86_400_000), timeZone)) return `Ontem, ${time}`
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
+  if (timeZone) opts.timeZone = timeZone
+  return `${new Intl.DateTimeFormat('pt-BR', opts).format(d)}, ${time}`
+}
+
+export function historyPacks(pages: readonly HistoryPage[] | undefined): HistoryPack[] {
+  return pages ? pages.flatMap((p) => p.packs) : []
+}
+
+export function findPack(
+  pages: readonly HistoryPage[] | undefined,
+  id: string,
+): HistoryPack | null {
+  return historyPacks(pages).find((p) => p.pack_id === id) ?? null
+}
