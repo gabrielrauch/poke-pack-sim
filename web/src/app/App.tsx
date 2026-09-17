@@ -3,6 +3,7 @@ import { useMe, useSession } from '../domains/auth/hooks'
 import { isUnauthorized } from '../domains/auth/model'
 import { saveSession } from '../domains/auth/session'
 import { AccessScreen } from '../domains/auth/ui/AccessScreen'
+import HomeScreen from '../domains/packs/ui/HomeScreen'
 import { PATHS, usePathname } from '../shared/lib/router'
 import { Link } from '../shared/ui/Link'
 import sh from '../shared/ui/shared.module.css'
@@ -39,7 +40,7 @@ export function App() {
 function Screen({ route }: { route: ReturnType<typeof matchRoute> }) {
   switch (route.name) {
     case 'home':
-      return <Home />
+      return <HomeScreen />
     case 'missing':
       return <NotFound />
     default:
@@ -47,19 +48,7 @@ function Screen({ route }: { route: ReturnType<typeof matchRoute> }) {
   }
 }
 
-/** Placeholder até a etapa 7 (Início de verdade, com contador e hora da recarga). */
-function Home() {
-  return (
-    <main className={s.home}>
-      <h1>pack-sim</h1>
-      <Link className={s.cta} to={PATHS.open}>
-        Abrir pacote
-      </Link>
-    </main>
-  )
-}
-
-/** Trocado pelas telas das tarefas 2 a 4. */
+/** Trocado pelas telas das tarefas 3 e 4. */
 function Placeholder({ name }: { name: string }) {
   return (
     <main className={sh.screen}>

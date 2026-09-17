@@ -1,6 +1,15 @@
-import { expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { ApiError } from '../../shared/lib/http'
-import { againLabel, classifyOpenError, newPackId, openFailureText, packsLeftText } from './model'
+import {
+  againLabel,
+  classifyOpenError,
+  newPackId,
+  openedCountText,
+  openFailureText,
+  packsLeftText,
+  quotaText,
+  refillText,
+} from './model'
 
 it('pack_id aceito pela API (8–64 chars de [A-Za-z0-9_-]) e único', () => {
   const a = newPackId()
@@ -63,4 +72,25 @@ it('botão do resumo e chip do cabeçalho', () => {
   expect(packsLeftText(2)).toBe('2 pacotes restantes')
   expect(packsLeftText(1)).toBe('1 pacote restante')
   expect(packsLeftText(0)).toBe('Último por agora')
+})
+
+describe('Início (§7.1)', () => {
+  it('contador de pacotes', () => {
+    expect(quotaText(0)).toBe('Sem pacotes agora')
+    expect(quotaText(1)).toBe('1 pacote para abrir')
+    expect(quotaText(7)).toBe('7 pacotes para abrir')
+  })
+
+  it('hora da próxima recarga, quanto entra, ou cota cheia', () => {
+    const at = '2026-09-17T21:00:00Z'
+    expect(refillText(at, 0, 'America/Sao_Paulo')).toBe('Volta às 18:00')
+    expect(refillText(at, 3, 'America/Sao_Paulo')).toBe('Mais 22 às 18:00')
+    expect(refillText(at, 25, 'America/Sao_Paulo')).toBe('Cota cheia')
+  })
+
+  it('total aberto', () => {
+    expect(openedCountText(0)).toBe('Nenhum pacote aberto')
+    expect(openedCountText(1)).toBe('1 pacote aberto')
+    expect(openedCountText(12)).toBe('12 pacotes abertos')
+  })
 })

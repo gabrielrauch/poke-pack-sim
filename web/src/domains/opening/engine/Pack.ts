@@ -1,6 +1,6 @@
 import { Group, Mesh, MeshPhysicalMaterial, type PlaneGeometry, type Texture } from 'three'
 import { MS } from '../../../shared/lib/motion'
-import { drawMouth, drawPackArt, drawSeal, type PackArtSource } from './packArt'
+import { drawMouth, drawPackArt, drawSeal, type PackArtSource } from '../../../shared/lib/packArt'
 import { packGeometry } from './packGeometry'
 import {
   bodyOutline,

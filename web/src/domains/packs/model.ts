@@ -1,3 +1,4 @@
+import recipe from '../../../../src/pack/recipes/sv.json'
 import { ApiError } from '../../shared/lib/http'
 import type { Tier } from '../catalog/model'
 
@@ -100,4 +101,28 @@ export function againLabel(packsAvailable: number): string {
 export function packsLeftText(packsAvailable: number): string {
   if (packsAvailable <= 0) return 'Último por agora'
   return packsAvailable === 1 ? '1 pacote restante' : `${packsAvailable} pacotes restantes`
+}
+
+const ALLOWANCE = recipe.allowance
+
+export function quotaText(packsAvailable: number): string {
+  if (packsAvailable <= 0) return 'Sem pacotes agora'
+  return packsAvailable === 1 ? '1 pacote para abrir' : `${packsAvailable} pacotes para abrir`
+}
+
+/** "Mais 25 às 21:00", "Volta às 21:00" (sem pacotes) ou "Cota cheia" (recarga não acrescenta nada). */
+export function refillText(
+  nextRefillAt: string,
+  packsAvailable: number,
+  timeZone?: string,
+): string {
+  const gain = Math.min(ALLOWANCE.amount, ALLOWANCE.cap - packsAvailable)
+  if (gain <= 0) return 'Cota cheia'
+  const at = formatTime(nextRefillAt, timeZone)
+  return packsAvailable <= 0 ? `Volta às ${at}` : `Mais ${gain} às ${at}`
+}
+
+export function openedCountText(total: number): string {
+  if (total <= 0) return 'Nenhum pacote aberto'
+  return total === 1 ? '1 pacote aberto' : `${total} pacotes abertos`
 }
