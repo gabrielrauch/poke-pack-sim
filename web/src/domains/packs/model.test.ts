@@ -44,11 +44,13 @@ it('texto por tipo de falha (hora da recarga no fuso pedido)', () => {
       'America/Sao_Paulo',
     ),
   ).toEqual({
-    title: 'Sem pacotes por hoje',
+    title: 'Sem pacotes agora',
     detail: 'O próximo chega às 00:00.',
     retry: false,
   })
-  expect(openFailureText({ kind: 'no_packs', nextRefillAt: null }).detail).toBe('Volta amanhã.')
+  expect(openFailureText({ kind: 'no_packs', nextRefillAt: null }).detail).toBe(
+    'Volta na próxima recarga.',
+  )
   expect(openFailureText({ kind: 'unavailable' }).retry).toBe(true)
   expect(openFailureText({ kind: 'unknown', code: 'INTERNAL' }).detail).toBe(
     'Erro INTERNAL. Tenta de novo.',
@@ -57,8 +59,8 @@ it('texto por tipo de falha (hora da recarga no fuso pedido)', () => {
 
 it('botão do resumo e chip do cabeçalho', () => {
   expect(againLabel(2)).toBe('Abrir outro pacote')
-  expect(againLabel(0)).toBe('Volta amanhã')
+  expect(againLabel(0)).toBe('Volta mais tarde')
   expect(packsLeftText(2)).toBe('2 pacotes restantes')
   expect(packsLeftText(1)).toBe('1 pacote restante')
-  expect(packsLeftText(0)).toBe('Último de hoje')
+  expect(packsLeftText(0)).toBe('Último por agora')
 })

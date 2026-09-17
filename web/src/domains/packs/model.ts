@@ -68,10 +68,10 @@ export function openFailureText(f: OpenFailure, timeZone?: string): FailureText 
       }
     case 'no_packs':
       return {
-        title: 'Sem pacotes por hoje',
+        title: 'Sem pacotes agora',
         detail: f.nextRefillAt
           ? `O próximo chega às ${formatTime(f.nextRefillAt, timeZone)}.`
-          : 'Volta amanhã.',
+          : 'Volta na próxima recarga.',
         retry: false,
       }
     case 'unavailable':
@@ -91,13 +91,13 @@ function formatTime(iso: string, timeZone?: string): string {
   return new Intl.DateTimeFormat('pt-BR', opts).format(new Date(iso))
 }
 
-/** Botão do resumo (§7.1): "Abrir outro pacote" ou "Volta amanhã". */
+/** Botão do resumo (§7.1): "Abrir outro pacote" ou "Volta mais tarde". */
 export function againLabel(packsAvailable: number): string {
-  return packsAvailable > 0 ? 'Abrir outro pacote' : 'Volta amanhã'
+  return packsAvailable > 0 ? 'Abrir outro pacote' : 'Volta mais tarde'
 }
 
 /** Chip do cabeçalho depois de abrir. */
 export function packsLeftText(packsAvailable: number): string {
-  if (packsAvailable <= 0) return 'Último de hoje'
+  if (packsAvailable <= 0) return 'Último por agora'
   return packsAvailable === 1 ? '1 pacote restante' : `${packsAvailable} pacotes restantes`
 }

@@ -21,7 +21,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <main className={s.home}>
         <h1>Algo deu errado</h1>
-        <p className={s.error}>{this.state.error.message}</p>
+        <p className={s.error}>Recarregue a página; se continuar, abre de novo pelo link.</p>
         <button type="button" className={s.cta} onClick={() => location.reload()}>
           Recarregar
         </button>

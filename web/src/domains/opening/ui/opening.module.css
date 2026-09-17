@@ -282,3 +282,6 @@ a.btn {
     animation: none;
   }
 }
+.summary:focus {
+  outline: none;
+}

@@ -101,7 +101,7 @@ export class OpeningScene {
   private readonly cardAssets: CardAssets
   private readonly background: Texture
   private pack: Pack | null = null
-  private packName = ''
+  private packKey = ''
   private cards: Card[] = []
   private plan: Reveal[] = []
   private revealed = 0
@@ -252,7 +252,8 @@ export class OpeningScene {
 
   /** Reaproveita o pacote se a arte é a mesma; senão desenha um novo (fonte e logo carregam antes). */
   private async buildPack(art: PackArt, gen: number): Promise<void> {
-    if (this.pack && this.packName === art.name) return
+    const key = `${art.name}\u0000${art.subtitle}\u0000${art.logo ?? ''}`
+    if (this.pack && this.packKey === key) return
     await document.fonts.load("700 40px 'Fredoka'").catch(() => [])
     const logo = await loadImage(art.logo)
     if (gen !== this.generation || this.disposed) return
@@ -261,7 +262,7 @@ export class OpeningScene {
       this.pack.dispose()
     }
     this.pack = new Pack(this.unitPlane, { name: art.name, subtitle: art.subtitle, logo })
-    this.packName = art.name
+    this.packKey = key
     this.pack.tilt.add(this.tearLine.group)
     this.stage.add(this.pack.root)
     this.pack.layout(this.packW)
