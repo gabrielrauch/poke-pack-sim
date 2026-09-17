@@ -1,5 +1,7 @@
 import { Group, Mesh, MeshPhysicalMaterial, type PlaneGeometry, type Texture } from 'three'
 import { MS } from '../../../shared/lib/motion'
+import { drawCrimp, drawMouth, drawPackArt, type PackArtSource } from './packArt'
+import { packGeometry } from './packGeometry'
 import {
   bodyOutline,
   guidePhase,
@@ -13,11 +15,25 @@ import { canvasTexture } from './textures'
 import type { Tween, Tweens } from './tween'
 
 export { PACK_ASPECT, STRIP_FRAC }
-const FONT = "'Fredoka', system-ui, sans-serif"
+export type PackArt = PackArtSource
 
-export type PackArt = { name: string; subtitle: string; logo: HTMLImageElement | null }
+/** Largura da textura; o pacote tem no máximo 250 px CSS × dpr 2, então 1024 dá texto nítido após o mip. */
+const TEX_W = 1024
+/** Segmentos na largura; a altura segue a proporção. Corpo 32×52 + tira 32×11 ≈ 3,7 k triângulos. */
+const SEGMENTS = 32
 
-/** Corpo + tira (§8.3): dois planos com MeshPhysicalMaterial (metal, clearcoat, iridescência sobre o env map). */
+/** Foil branco: metal reflete a sala (env map), clearcoat dá o verniz, iridescência dá o arco-íris de canto. */
+const FOIL = {
+  metalness: 0.5,
+  roughness: 0.34,
+  clearcoat: 0.5,
+  clearcoatRoughness: 0.28,
+  iridescence: 0.4,
+  iridescenceIOR: 1.35,
+  iridescenceThicknessRange: [140, 400] as [number, number],
+}
+
+/** Corpo + tira (§8.3): dois meshes estufados (`packGeometry`) com a arte de `packArt` e material foil. */
 export class Pack {
   readonly root = new Group()
   readonly bob = new Group()
@@ -34,50 +50,66 @@ export class Pack {
   stripY = 0
   private held = false
   private heldTween: Tween | null = null
+  private readonly bodyGeometry: PlaneGeometry
+  private readonly stripGeometry: PlaneGeometry
   private readonly bodyMap: Texture
   private readonly stripIntact: Texture
   private readonly stripTorn: Texture
   private readonly sweep: Texture
   private readonly guide: Texture
 
-  constructor(geometry: PlaneGeometry, art: PackArt) {
-    const stripH = Math.round(512 * PACK_ASPECT * STRIP_FRAC)
-    this.bodyMap = canvasTexture(512, Math.round(512 * PACK_ASPECT), (ctx, w, h) =>
-      drawBody(ctx, w, h, art),
-    )
-    this.stripIntact = canvasTexture(512, stripH, (ctx, w, h) => drawStrip(ctx, w, h, false))
-    this.stripTorn = canvasTexture(512, stripH, (ctx, w, h) => drawStrip(ctx, w, h, true))
+  constructor(art: PackArt, maxAnisotropy = 1) {
+    const texH = Math.round(TEX_W * PACK_ASPECT)
+    const stripH = Math.round(texH * STRIP_FRAC)
+    // A frente inteira uma vez; corpo e tira são fatias dela (o logotipo fica na tira e voa com ela).
+    const full = document.createElement('canvas')
+    full.width = TEX_W
+    full.height = texH
+    const fctx = full.getContext('2d')
+    if (!fctx) throw new Error('canvas 2d indisponível')
+    drawPackArt(fctx, TEX_W, texH, art)
+    this.bodyMap = foilTexture(TEX_W, texH, maxAnisotropy, (ctx, w, h) => {
+      clipOutline(ctx, bodyOutline(), w, h)
+      ctx.drawImage(full, 0, 0)
+      drawCrimp(ctx, 0, h * 0.93, w, h * 0.04)
+      drawMouth(ctx, w, h, STRIP_FRAC)
+    })
+    const stripTexture = (torn: boolean) =>
+      foilTexture(TEX_W, stripH, maxAnisotropy, (ctx, w, h) => {
+        clipOutline(ctx, stripOutline(torn), w, h)
+        ctx.drawImage(full, 0, 0, w, h, 0, 0, w, h)
+        drawCrimp(ctx, 0, h * 0.1, w, h * 0.16)
+      })
+    this.stripIntact = stripTexture(false)
+    this.stripTorn = stripTexture(true)
     this.sweep = bandTexture(0.16, 105)
     this.guide = bandTexture(0.4, 90)
     this.bodyMaterial = new MeshPhysicalMaterial({
       map: this.bodyMap,
       transparent: true,
-      metalness: 0.3,
-      roughness: 0.5,
-      clearcoat: 0.35,
-      clearcoatRoughness: 0.35,
-      iridescence: 0.35,
-      iridescenceIOR: 1.3,
+      ...FOIL,
       emissive: 0xffffff,
       emissiveMap: this.sweep,
-      emissiveIntensity: 0.25,
+      emissiveIntensity: 0.14,
     })
     this.stripMaterial = new MeshPhysicalMaterial({
       map: this.stripIntact,
       transparent: true,
-      metalness: 0.3,
-      roughness: 0.5,
-      clearcoat: 0.3,
-      clearcoatRoughness: 0.35,
-      iridescence: 0.3,
-      iridescenceIOR: 1.3,
+      ...FOIL,
       emissive: 0xffffff,
       emissiveMap: this.guide,
       emissiveIntensity: 0,
     })
-    this.body = new Mesh(geometry, this.bodyMaterial)
+    this.bodyGeometry = packGeometry(SEGMENTS, Math.round(SEGMENTS * PACK_ASPECT))
+    this.stripGeometry = packGeometry(
+      SEGMENTS,
+      Math.max(4, Math.round(SEGMENTS * PACK_ASPECT * STRIP_FRAC)),
+      0,
+      STRIP_FRAC,
+    )
+    this.body = new Mesh(this.bodyGeometry, this.bodyMaterial)
     this.body.renderOrder = 2
-    this.stripMesh = new Mesh(geometry, this.stripMaterial)
+    this.stripMesh = new Mesh(this.stripGeometry, this.stripMaterial)
     this.stripMesh.renderOrder = 2
     this.stripMesh.position.z = 2
     this.bodyPivot.add(this.body)
@@ -88,12 +120,12 @@ export class Pack {
     this.root.add(this.bob)
   }
 
-  /** Tamanho em px (1 unidade = 1 px em z=0). A tira ocupa os 21% do topo. */
+  /** Tamanho em px (1 unidade = 1 px em z=0). z da geometria é fração da largura, daí `scale.z = w`. */
   layout(packW: number): void {
     this.width = packW
     this.height = packW * PACK_ASPECT
-    this.body.scale.set(this.width, this.height, 1)
-    this.stripMesh.scale.set(this.width, this.height * STRIP_FRAC, 1)
+    this.body.scale.set(this.width, this.height, this.width)
+    this.stripMesh.scale.set(this.width, this.height * STRIP_FRAC, this.width)
     this.stripY = this.height * (0.5 - STRIP_FRAC / 2)
     this.strip.position.y = this.stripY
   }
@@ -105,7 +137,7 @@ export class Pack {
       this.sweep.offset.x = 0.55 - 1.1 * sweepPhase(now)
       const g = guidePhase(now)
       this.guide.offset.x = 0.7 - 1.4 * g.x
-      this.stripMaterial.emissiveIntensity = tearing ? 0 : g.opacity * 0.4
+      this.stripMaterial.emissiveIntensity = tearing ? 0 : g.opacity * 0.25
     } else {
       this.bob.position.y = 0
       this.sweep.offset.x = 0.55
@@ -150,7 +182,20 @@ export class Pack {
       t.dispose()
     this.bodyMaterial.dispose()
     this.stripMaterial.dispose()
+    this.bodyGeometry.dispose()
+    this.stripGeometry.dispose()
   }
+}
+
+function foilTexture(
+  w: number,
+  h: number,
+  maxAnisotropy: number,
+  draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void,
+): Texture {
+  const tex = canvasTexture(w, h, draw)
+  tex.anisotropy = Math.min(4, maxAnisotropy)
+  return tex
 }
 
 function clipOutline(ctx: CanvasRenderingContext2D, outline: Outline, w: number, h: number): void {
@@ -158,99 +203,6 @@ function clipOutline(ctx: CanvasRenderingContext2D, outline: Outline, w: number,
   outline.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x * w, y * h) : ctx.lineTo(x * w, y * h)))
   ctx.closePath()
   ctx.clip()
-}
-
-function stripes(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  light: string,
-  dark: string,
-): void {
-  ctx.fillStyle = dark
-  ctx.fillRect(x, y, w, h)
-  ctx.fillStyle = light
-  for (let i = 0; i < w; i += 16) ctx.fillRect(x + i, y, 8, h)
-}
-
-/** Arte do corpo: gradiente, relevo, linhas finas, logo do set (ou nome), ridge, boca escura, bordas laterais. */
-function drawBody(ctx: CanvasRenderingContext2D, w: number, h: number, art: PackArt): void {
-  ctx.save()
-  clipOutline(ctx, bodyOutline(), w, h)
-  const g = ctx.createLinearGradient(w * 0.2, 0, w * 0.8, h)
-  g.addColorStop(0, '#6a47ff')
-  g.addColorStop(0.36, '#2f2196')
-  g.addColorStop(0.68, '#171240')
-  g.addColorStop(1, '#3d2ba6')
-  ctx.fillStyle = g
-  ctx.fillRect(0, 0, w, h)
-  const relief = ctx.createRadialGradient(w * 0.5, h * 0.46, 0, w * 0.5, h * 0.46, w * 0.62)
-  relief.addColorStop(0, 'rgba(255,255,255,.16)')
-  relief.addColorStop(0.62, 'rgba(255,255,255,0)')
-  ctx.fillStyle = relief
-  ctx.fillRect(0, 0, w, h)
-  ctx.save()
-  ctx.translate(w / 2, h / 2)
-  ctx.rotate((10 * Math.PI) / 180)
-  ctx.strokeStyle = 'rgba(255,255,255,.07)'
-  ctx.lineWidth = 2
-  for (let x = -h; x < h; x += 10) {
-    ctx.beginPath()
-    ctx.moveTo(x, -h)
-    ctx.lineTo(x, h)
-    ctx.stroke()
-  }
-  ctx.restore()
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.shadowColor = 'rgba(0,0,0,.35)'
-  ctx.shadowBlur = 12
-  if (art.logo) {
-    const lw = w * 0.64
-    const lh = (lw * art.logo.naturalHeight) / art.logo.naturalWidth
-    ctx.drawImage(art.logo, (w - lw) / 2, h * 0.5 - lh / 2, lw, lh)
-  } else {
-    ctx.fillStyle = '#fff'
-    ctx.font = `700 ${w * 0.1}px ${FONT}`
-    ctx.fillText(art.name, w / 2, h * 0.5)
-  }
-  ctx.fillStyle = 'rgba(255,255,255,.72)'
-  ctx.font = `500 ${w * 0.055}px ${FONT}`
-  ctx.fillText(art.subtitle, w / 2, h * 0.7)
-  ctx.shadowBlur = 0
-  stripes(ctx, 0, h * 0.92, w, h * 0.05, 'rgba(255,255,255,.3)', 'rgba(0,0,0,.16)')
-  const mouth = ctx.createLinearGradient(0, 0, 0, h * 0.34)
-  mouth.addColorStop(0, 'rgba(5,4,20,.96)')
-  mouth.addColorStop(0.52, 'rgba(5,4,20,.96)')
-  mouth.addColorStop(1, 'rgba(5,4,20,0)')
-  ctx.fillStyle = mouth
-  ctx.fillRect(0, 0, w, h * 0.34)
-  ctx.fillStyle = 'rgba(255,255,255,.2)'
-  ctx.fillRect(0, 0, 2, h)
-  ctx.fillStyle = 'rgba(0,0,0,.25)'
-  ctx.fillRect(w - 2, 0, 2, h)
-  ctx.restore()
-}
-
-function drawStrip(ctx: CanvasRenderingContext2D, w: number, h: number, torn: boolean): void {
-  ctx.save()
-  clipOutline(ctx, stripOutline(torn), w, h)
-  const g = ctx.createLinearGradient(0, 0, 0, h)
-  g.addColorStop(0, '#9581ff')
-  g.addColorStop(0.6, '#5642d8')
-  g.addColorStop(1, '#4a37c9')
-  ctx.fillStyle = g
-  ctx.fillRect(0, 0, w, h)
-  stripes(ctx, 0, h * 0.12, w, h * 0.16, 'rgba(255,255,255,.35)', 'rgba(0,0,0,.14)')
-  ctx.fillStyle = 'rgba(0,0,0,.28)'
-  ctx.fillRect(0, h - 4, w, 4)
-  ctx.fillStyle = 'rgba(255,255,255,.2)'
-  ctx.fillRect(0, 0, 2, h)
-  ctx.fillStyle = 'rgba(0,0,0,.25)'
-  ctx.fillRect(w - 2, 0, 2, h)
-  ctx.restore()
 }
 
 /** Faixa branca suave sobre preto, girada. Com ClampToEdge, mover `offset.x` faz a faixa cruzar e sumir. */

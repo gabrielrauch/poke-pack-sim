@@ -178,8 +178,9 @@ export class OpeningScene {
     const room = new RoomEnvironment()
     this.scene.environment = pmrem.fromScene(room, 0.04).texture
     room.dispose()
-    // O RoomEnvironment é uma sala branca: em 1.0 o pacote roxo vira lilás. Só o pacote usa o env map.
-    this.scene.environmentIntensity = 0.4
+    // Só o pacote usa o env map (cartas e efeitos são ShaderMaterial/MeshBasicMaterial). Com
+    // `scene.environment`, o three aplica esta intensidade e ignora `material.envMapIntensity`.
+    this.scene.environmentIntensity = 1
     pmrem.dispose()
 
     this.dim = new Mesh(
@@ -261,7 +262,10 @@ export class OpeningScene {
       this.stage.remove(this.pack.root)
       this.pack.dispose()
     }
-    this.pack = new Pack(this.unitPlane, { name: art.name, subtitle: art.subtitle, logo })
+    this.pack = new Pack(
+      { name: art.name, subtitle: art.subtitle, logo },
+      this.renderer.capabilities.getMaxAnisotropy(),
+    )
     this.packKey = key
     this.pack.tilt.add(this.tearLine.group)
     this.stage.add(this.pack.root)
