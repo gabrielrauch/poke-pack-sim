@@ -18,5 +18,5 @@
   "hit_tiers": ["illustration_rare", "ultra_rare", "special_illustration_rare", "hyper_rare"],
   "pity": { "after": 6, "min_tier": "illustration_rare" },
   "favorites_multiplier": 3,
-  "allowance": { "daily": 3, "cap": 6 }
+  "allowance": { "amount": 25, "hours": 3, "cap": 25 }
 }

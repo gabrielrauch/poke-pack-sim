@@ -30,4 +30,15 @@ Todas as rotas em `/api/*` (menos `health` e `catalog`) exigem `Authorization: B
 
 `pnpm dev` (Worker, para as imagens) e `pnpm dev:web`, depois http://localhost:5173/lab. Dados falsos com imagens reais do sv03.5; `?tier=hyper_rare` escolhe a última carta (`rare`, `holo`, `double_rare`, `illustration_rare`, `ultra_rare`, `special_illustration_rare`, `hyper_rare`). O medidor no topo mostra fps, ms por frame, draw calls, triângulos e pixel ratio. Espaço/Enter rasga o pacote e vira cartas no desktop; em dev a cena fica em `window.__scene`.
 
-No iPhone: `pnpm build && wrangler versions upload` e abra a URL de preview (HTTPS, necessária para `deviceorientation`).
+No iPhone (mesma rede): `pnpm build && pnpm exec wrangler dev --ip 0.0.0.0 --port 8787 --local-protocol https` e abra `https://<ip-da-mac>:8787/lab` (HTTPS é necessário para `deviceorientation`).
+
+## Tela de abertura (`/abrir`)
+
+1. `pnpm db:migrate` e `pnpm user:create "Nome"` (imprime o link com o token).
+2. `pnpm dev` (Worker) e `pnpm dev:web` (Vite com HMR), depois abra o link local trocando a porta: `http://localhost:5173/#t=<token>`. O token vai para o `localStorage` e sai da URL; sem token, `/abrir` mostra "Link de acesso inválido".
+3. "Abrir pacote": o pacote fechado entra enquanto o `POST /api/packs` roda; rasgue pelo topo e vire as cartas. Sem cota, a tela diz a hora da recarga.
+
+- `pack_id` é gerado na tela e reutilizado em "Tentar de novo": a API é idempotente por id.
+- `prefers-reduced-motion`: metade das durações, sem lascas/partículas/raios, flip vira fade, pacote parado (DevTools → Rendering para emular).
+- Sem WebGL2 o caminho é DOM (uma carta por toque). Em dev, `/abrir?fallback=1` força esse caminho.
+- Só um `wrangler dev` por vez no mesmo D1 local (`SQLITE_BUSY`).

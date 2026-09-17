@@ -19,7 +19,7 @@ export const EASE = {
   linear: [0, 0, 1, 1],
 } as const satisfies Record<string, Bezier>
 
-/** Durações em ms (§8). Com prefers-reduced-motion a engine multiplica por 0,5 (etapa 6). */
+/** Durações em ms (§8). Com prefers-reduced-motion a cena multiplica por 0,5 (`OpeningScene`, opção `reducedMotion`). */
 export const MS = {
   held: 150,
   bob: 3400,
@@ -52,3 +52,8 @@ export const MS = {
   summaryFade: 350,
   packEnter: 520,
 } as const
+
+/** §8: com `prefers-reduced-motion` a cena usa metade das durações, sem lascas/partículas/raios, flip vira fade, ociosos desligados. */
+export function prefersReducedMotion(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+}

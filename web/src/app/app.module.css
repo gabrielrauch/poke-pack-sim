@@ -1,0 +1,32 @@
+.home {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  gap: 18px;
+  padding: 24px;
+  text-align: center;
+}
+.home h1 {
+  font-size: 32px;
+}
+.cta {
+  display: inline-block;
+  padding: 14px 28px;
+  border-radius: 999px;
+  background: var(--violet);
+  color: #fff;
+  font-weight: 700;
+  font-size: 17px;
+  text-decoration: none;
+}
+.cta:focus-visible {
+  outline: 3px solid var(--rose);
+  outline-offset: 3px;
+}
+.error {
+  color: var(--ink-dim);
+  font-size: 14px;
+  max-width: 40ch;
+  overflow-wrap: anywhere;
+}

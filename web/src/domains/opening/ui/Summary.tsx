@@ -8,18 +8,32 @@ import s from './opening.module.css'
 export function Summary({
   cards,
   onAgain,
+  againLabel = 'Abrir outro pacote',
+  againDisabled = false,
   children,
 }: {
   cards: readonly PackCard[]
   onAgain: () => void
+  /** "Volta mais tarde" quando a cota acabou (§7.1). */
+  againLabel?: string
+  againDisabled?: boolean
   children?: ReactNode
 }) {
   const button = useRef<HTMLButtonElement>(null)
+  const dialog = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    button.current?.focus({ preventScroll: true })
-  }, [])
+    // Botão desabilitado não recebe foco: o foco vai para o diálogo.
+    const target = againDisabled ? dialog.current : button.current
+    target?.focus({ preventScroll: true })
+  }, [againDisabled])
   return (
-    <div className={s.summary} role="dialog" aria-label="Resumo do pacote">
+    <div
+      ref={dialog}
+      className={s.summary}
+      role="dialog"
+      aria-label="Resumo do pacote"
+      tabIndex={-1}
+    >
       <div className={s.sumTitle}>{summaryTitle(cards)}</div>
       <div className={s.fan}>
         {cards.map((card, i) => (
@@ -44,8 +58,14 @@ export function Summary({
         ))}
       </div>
       <div className={s.sumSub}>{summarySubtitle(cards)}</div>
-      <button ref={button} type="button" className={s.btn} onClick={onAgain}>
-        Abrir outro pacote
+      <button
+        ref={button}
+        type="button"
+        className={s.btn}
+        onClick={onAgain}
+        disabled={againDisabled}
+      >
+        {againLabel}
       </button>
       {children}
     </div>

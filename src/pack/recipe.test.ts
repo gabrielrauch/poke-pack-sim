@@ -42,7 +42,16 @@ describe('parseRecipe', () => {
     ['bad hit tier', (r) => ({ ...r, hit_tiers: ['rare', 'nope'] }), 'hit_tiers'],
     ['bad pity', (r) => ({ ...r, pity: { after: 0, min_tier: 'rare' } }), 'pity'],
     ['bad multiplier', (r) => ({ ...r, favorites_multiplier: -1 }), 'favorites_multiplier'],
-    ['cap below daily', (r) => ({ ...r, allowance: { daily: 3, cap: 2 } }), 'allowance'],
+    [
+      'cap below amount',
+      (r) => ({ ...r, allowance: { amount: 3, hours: 3, cap: 2 } }),
+      'allowance',
+    ],
+    [
+      'zero refill hours',
+      (r) => ({ ...r, allowance: { amount: 3, hours: 0, cap: 6 } }),
+      'allowance',
+    ],
   ])('rejects %s', (_label, mutate, fragment) => {
     const raw = mutate(valid())
     expect(() => parseRecipe(raw)).toThrow(PackError)

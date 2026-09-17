@@ -27,7 +27,7 @@ describe('GET /api/me', () => {
   it('returns the profile with the refill applied and persisted', async () => {
     await seedUser({
       packs_available: 1,
-      last_refill_date: '2026-09-15',
+      last_refill_date: '2026-09-16T09:00:00.000Z',
       total_packs: 7,
       packs_since_hit: 2,
       favorites: ['Pikachu'],
@@ -37,14 +37,14 @@ describe('GET /api/me', () => {
     expect(await res.json()).toEqual({
       id: 'u1',
       name: 'Ela',
-      packs_available: 4,
-      next_refill_at: '2026-09-17T03:00:00.000Z',
+      packs_available: 25,
+      next_refill_at: '2026-09-16T15:00:00.000Z',
       total_packs: 7,
       packs_since_hit: 2,
       favorites: ['Pikachu'],
     })
     const again = await app().request('/api/me', auth(), env)
-    expect(((await again.json()) as { packs_available: number }).packs_available).toBe(4)
+    expect(((await again.json()) as { packs_available: number }).packs_available).toBe(25)
   })
 
   it('never caches the profile', async () => {

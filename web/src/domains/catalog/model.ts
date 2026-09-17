@@ -1,7 +1,10 @@
 import recipe from '../../../../src/pack/recipes/sv.json'
-import type { Tier } from '../../../../src/provider/types'
+import type { SetCatalog, Tier } from '../../../../src/provider/types'
 
-export type { Tier }
+export type { SetCatalog, Tier }
+
+/** Único set da v1 (§1.5); seletor de set é da etapa 7. */
+export const DEFAULT_SET = 'sv03.5'
 
 /** Tiers que contam como "puxada grande" (§6, recipe `hit_tiers`). */
 export const HIT_TIERS: ReadonlySet<string> = new Set(recipe.hit_tiers)
@@ -37,6 +40,17 @@ const IMAGE_ORIGIN = 'https://assets.tcgdex.net'
 /** URL do CDN do TCGdex → passthrough do Worker (`GET /api/img/*`), mesma origem: o CDN manda CORS duplicado. */
 export function proxiedImage(url: string): string {
   return url.startsWith(IMAGE_ORIGIN) ? `/api/img${url.slice(IMAGE_ORIGIN.length)}` : url
+}
+
+/** O que a cena precisa para desenhar o pacote (§3: `boosters` vem nulo, a arte é procedural com o logo). */
+export type PackArt = { name: string; subtitle: string; logo: string | null }
+
+export function packArt(catalog: Pick<SetCatalog, 'name' | 'logo'>, size = 5): PackArt {
+  return {
+    name: catalog.name,
+    subtitle: `${size} cartas`,
+    logo: catalog.logo ? proxiedImage(`${catalog.logo}.png`) : null,
+  }
 }
 
 /** `img` é a URL base do TCGdex sem extensão (§7.2: `low.webp` em grades, `high.webp` nas texturas). */

@@ -29,3 +29,12 @@ export function summarySubtitle(cards: readonly PackCard[]): string {
   const n = cards.filter((c) => c.new).length
   return n === 1 ? '1 carta nova para o álbum' : `${n} cartas novas para o álbum`
 }
+
+export const HINT_PREPARING = 'Preparando o pacote…'
+
+/** Rodapé do fallback sem WebGL: `revealed` cartas já mostradas (0 = pacote fechado). */
+export function fallbackHint(revealed: number, total: number, ready: boolean): string {
+  if (!ready) return HINT_PREPARING
+  if (revealed === 0) return 'Toque para abrir'
+  return revealed >= total ? 'Toque para terminar' : 'Toque para a próxima'
+}

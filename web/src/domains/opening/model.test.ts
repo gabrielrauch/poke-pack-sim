@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest'
 import type { PackCard } from '../packs/model'
-import { fanTransform, hintFor, summarySubtitle, summaryTitle } from './model'
+import { fallbackHint, fanTransform, hintFor, summarySubtitle, summaryTitle } from './model'
 
 const card = (tier: PackCard['tier'], isNew = false): PackCard => ({
   n: '1',
@@ -33,4 +33,11 @@ it('título e subtítulo do resumo', () => {
   expect(summarySubtitle([card('common', true), card('rare', true), card('rare')])).toBe(
     '2 cartas novas para o álbum',
   )
+})
+
+it('hint do fallback sem WebGL', () => {
+  expect(fallbackHint(0, 5, false)).toBe('Preparando o pacote…')
+  expect(fallbackHint(0, 5, true)).toBe('Toque para abrir')
+  expect(fallbackHint(2, 5, true)).toBe('Toque para a próxima')
+  expect(fallbackHint(5, 5, true)).toBe('Toque para terminar')
 })

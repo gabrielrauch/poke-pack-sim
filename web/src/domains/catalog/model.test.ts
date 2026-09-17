@@ -1,5 +1,13 @@
 import { expect, it } from 'vitest'
-import { cardImage, GOLD_TIERS, HIT_TIERS, isHit, proxiedImage } from './model'
+import {
+  cardImage,
+  DEFAULT_SET,
+  GOLD_TIERS,
+  HIT_TIERS,
+  isHit,
+  packArt,
+  proxiedImage,
+} from './model'
 
 it('hit tiers vêm da recipe sv', () => {
   expect([...HIT_TIERS]).toEqual([
@@ -21,4 +29,14 @@ it('cardImage monta a URL e respeita null', () => {
   )
   expect(proxiedImage('https://other.example/x.png')).toBe('https://other.example/x.png')
   expect(cardImage(null, 'low')).toBeNull()
+})
+
+it('arte procedural do pacote a partir do catálogo (logo pelo passthrough)', () => {
+  expect(packArt({ name: '151', logo: 'https://assets.tcgdex.net/pt/sv/sv03.5/logo' })).toEqual({
+    name: '151',
+    subtitle: '5 cartas',
+    logo: '/api/img/pt/sv/sv03.5/logo.png',
+  })
+  expect(packArt({ name: 'X', logo: null }).logo).toBeNull()
+  expect(DEFAULT_SET).toBe('sv03.5')
 })
