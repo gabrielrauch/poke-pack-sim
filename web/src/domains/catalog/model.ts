@@ -1,7 +1,7 @@
 import recipe from '../../../../src/pack/recipes/sv.json'
-import type { SetCatalog, Tier } from '../../../../src/provider/types'
+import type { Card, SetCatalog, Tier } from '../../../../src/provider/types'
 
-export type { SetCatalog, Tier }
+export type { Card, SetCatalog, Tier }
 
 /** Único set da v1 (§1.5); seletor de set é da etapa 7. */
 export const DEFAULT_SET = 'sv03.5'
@@ -32,6 +32,24 @@ export const TIER_LABEL: Record<Tier, string> = {
   black_white_rare: 'Rara Preto e Branco',
   mega_hyper_rare: 'Mega Hiper Rara',
 }
+
+/** Ordem dos tiers, do comum ao mais raro (filtro do álbum). */
+export const TIER_ORDER: readonly Tier[] = [
+  'common',
+  'uncommon',
+  'rare',
+  'holo',
+  'double_rare',
+  'ace_spec',
+  'illustration_rare',
+  'ultra_rare',
+  'special_illustration_rare',
+  'hyper_rare',
+  'shiny_rare',
+  'shiny_ultra_rare',
+  'black_white_rare',
+  'mega_hyper_rare',
+]
 
 export type ImageSize = 'low' | 'high'
 

@@ -15,6 +15,7 @@ import { matchRoute } from './router'
 /** three e a engine só entram nos chunks destas telas (§8.11); álbum e histórico nunca carregam Three. */
 const OpenScreen = lazy(() => import('../domains/opening/ui/OpenScreen'))
 const LabScreen = lazy(() => import('../domains/opening/ui/LabScreen'))
+const AlbumScreen = lazy(() => import('../domains/collection/ui/AlbumScreen'))
 
 export function App() {
   const route = matchRoute(usePathname())
@@ -41,6 +42,8 @@ function Screen({ route }: { route: ReturnType<typeof matchRoute> }) {
   switch (route.name) {
     case 'home':
       return <HomeScreen />
+    case 'album':
+      return <Lazy screen={<AlbumScreen />} />
     case 'missing':
       return <NotFound />
     default:
@@ -48,7 +51,7 @@ function Screen({ route }: { route: ReturnType<typeof matchRoute> }) {
   }
 }
 
-/** Trocado pelas telas das tarefas 3 e 4. */
+/** Trocado pela tela da tarefa 4. */
 function Placeholder({ name }: { name: string }) {
   return (
     <main className={sh.screen}>
