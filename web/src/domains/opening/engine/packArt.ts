@@ -30,13 +30,18 @@ export function drawPackArt(ctx: Ctx, w: number, h: number, art: PackArtSource):
   drawEdges(ctx, w, h)
 }
 
-/** Costura prensada: ranhuras finas claras sobre um leve escurecimento (o relevo do crimp). */
+/** Costura prensada: foil liso (sem arte por baixo) com ranhuras verticais finas e sutis, o relevo do crimp. */
 export function drawCrimp(ctx: Ctx, x: number, y: number, w: number, h: number): void {
-  ctx.fillStyle = 'rgba(0,0,0,.14)'
+  const g = ctx.createLinearGradient(0, y, 0, y + h)
+  g.addColorStop(0, '#eef0f6')
+  g.addColorStop(1, '#dde1ea')
+  ctx.fillStyle = g
   ctx.fillRect(x, y, w, h)
-  ctx.fillStyle = 'rgba(255,255,255,.55)'
-  const step = w / 46
-  for (let i = 0; i < w; i += step) ctx.fillRect(x + i, y, step * 0.45, h)
+  const step = w / 90
+  ctx.fillStyle = 'rgba(255,255,255,.5)'
+  for (let i = 0; i < w; i += step) ctx.fillRect(x + i, y, step * 0.5, h)
+  ctx.fillStyle = 'rgba(40,40,70,.1)'
+  for (let i = step * 0.5; i < w; i += step) ctx.fillRect(x + i, y, step * 0.5, h)
 }
 
 /** Interior escuro sob a tira (aparece quando ela sai) e a sombra da dobra logo abaixo dela. */

@@ -71,14 +71,14 @@ export class Pack {
     this.bodyMap = foilTexture(TEX_W, texH, maxAnisotropy, (ctx, w, h) => {
       clipOutline(ctx, bodyOutline(), w, h)
       ctx.drawImage(full, 0, 0)
-      drawCrimp(ctx, 0, h * 0.93, w, h * 0.04)
+      drawCrimp(ctx, 0, h * 0.955, w, h * 0.045)
       drawMouth(ctx, w, h, STRIP_FRAC)
     })
     const stripTexture = (torn: boolean) =>
       foilTexture(TEX_W, stripH, maxAnisotropy, (ctx, w, h) => {
         clipOutline(ctx, stripOutline(torn), w, h)
         ctx.drawImage(full, 0, 0, w, h, 0, 0, w, h)
-        drawCrimp(ctx, 0, h * 0.1, w, h * 0.16)
+        drawCrimp(ctx, 0, 0, w, h * 0.2)
       })
     this.stripIntact = stripTexture(false)
     this.stripTorn = stripTexture(true)
