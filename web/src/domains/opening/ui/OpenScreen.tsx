@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
+import { PATHS } from '../../../shared/lib/router'
 import { hasWebGL2 } from '../../../shared/lib/webgl'
+import { Link } from '../../../shared/ui/Link'
 import { useCatalog } from '../../catalog/hooks'
 import { DEFAULT_SET, packArt } from '../../catalog/model'
 import { useOpenPack } from '../../packs/hooks'
@@ -54,9 +56,9 @@ export default function OpenScreen() {
   return (
     <div className={s.stage}>
       <header className={s.top}>
-        <a className={s.link} href="/">
+        <Link className={s.link} to={PATHS.home}>
           ‹ Início
-        </a>
+        </Link>
         <b>{art?.name ?? ''}</b>
         <span>{opened.data ? packsLeftText(opened.data.packs_available) : ''}</span>
       </header>
@@ -72,7 +74,11 @@ export default function OpenScreen() {
           onAgain={again}
           againLabel={againLabel(opened.data.packs_available)}
           againDisabled={opened.data.packs_available <= 0}
-        />
+        >
+          <Link className={s.link} to={PATHS.album}>
+            Ver no álbum
+          </Link>
+        </Summary>
       )}
     </div>
   )
@@ -89,9 +95,9 @@ function StatusOverlay({ text, onRetry }: { text: FailureText; onRetry: () => vo
             Tentar de novo
           </button>
         ) : (
-          <a className={s.btn} href="/">
+          <Link className={s.btn} to={PATHS.home}>
             Voltar ao início
-          </a>
+          </Link>
         )}
       </div>
     </div>

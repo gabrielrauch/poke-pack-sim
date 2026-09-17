@@ -1,6 +1,7 @@
 import { manifestHref, TOKEN, TOKEN_KEY, tokenFromLocation, urlWithoutToken } from './model'
 
 let token: string | null = null
+const listeners = new Set<() => void>()
 
 /**
  * Uma vez, no bootstrap (§5): token da URL vai para o localStorage e sai da barra de endereço;
@@ -13,15 +14,32 @@ export function loadSession(): string | null {
     history.replaceState(null, '', urlWithoutToken(location.pathname, location.search))
   }
   token = fromUrl ?? read()
-  if (token) {
-    document
-      .querySelector<HTMLLinkElement>('link[rel="manifest"]')
-      ?.setAttribute('href', manifestHref(token))
-  }
+  if (token) linkManifest(token)
   return token
 }
 
+/** Token colado na tela de acesso: salva, aponta o manifest e avisa `useSession`. */
+export function saveSession(t: string): void {
+  save(t)
+  token = t
+  linkManifest(t)
+  listeners.forEach((l) => l())
+}
+
 export const getToken = (): string | null => token
+
+export function subscribeSession(cb: () => void): () => void {
+  listeners.add(cb)
+  return () => {
+    listeners.delete(cb)
+  }
+}
+
+function linkManifest(t: string): void {
+  document
+    .querySelector<HTMLLinkElement>('link[rel="manifest"]')
+    ?.setAttribute('href', manifestHref(t))
+}
 
 function read(): string | null {
   try {
