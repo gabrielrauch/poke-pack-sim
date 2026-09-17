@@ -5,13 +5,11 @@ import {
   NoToneMapping,
   PerspectiveCamera,
   PlaneGeometry,
-  PMREMGenerator,
   Scene,
   Vector3,
   WebGLRenderer,
   type Texture,
 } from 'three'
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { EASE, MS } from '../../../shared/lib/motion'
 import { cardImage, type PackArt } from '../../catalog/model'
 import type { PackCard } from '../../packs/model'
@@ -44,7 +42,7 @@ import {
 } from './sequence'
 import { tearBegin, tearMove, tearRelease, type Tear } from './tear'
 import { TearLine } from './TearLine'
-import { canvasTexture, loadCardTextures, loadImage } from './textures'
+import { canvasTexture, loadCardTextures, loadImage, studioEnvironment } from './textures'
 import { createTilt, setTiltTarget, updateTilt } from './tilt'
 import { Tweens } from './tween'
 
@@ -78,6 +76,9 @@ const CAMERA_Z = 1000
 const STAGE_Y = 32
 const FRAME_WINDOW = 30
 const FRAME_BUDGET_MS = 20
+/** Sobe um degrau de dpr depois de FRAME_RECOVER_WINDOWS janelas seguidas com todos os frames abaixo disto. */
+const FRAME_RECOVER_MS = 13
+const FRAME_RECOVER_WINDOWS = 4
 /** Frames ignorados pelo degrau de dpr: compilação de shaders e upload de texturas no começo. */
 const FRAME_WARMUP = 90
 const rad = (deg: number) => (deg * Math.PI) / 180
@@ -128,6 +129,10 @@ export class OpeningScene {
   private frameCount = 0
   private readonly dprSteps: number[]
   private dprIndex = 0
+  private fastWindows = 0
+  /** Degrau mais alto permitido depois de uma oscilação (índice em dprSteps). */
+  private dprCeiling = 0
+  private windowsSinceUp = Infinity
   private lastCalls = 0
   private lastTriangles = 0
   private readonly corners = [new Vector3(), new Vector3(), new Vector3(), new Vector3()]
@@ -174,13 +179,10 @@ export class OpeningScene {
     })
     this.scene.background = this.background
 
-    const pmrem = new PMREMGenerator(this.renderer)
-    const room = new RoomEnvironment()
-    this.scene.environment = pmrem.fromScene(room, 0.04).texture
-    room.dispose()
-    // O RoomEnvironment é uma sala branca: em 1.0 o pacote roxo vira lilás. Só o pacote usa o env map.
-    this.scene.environmentIntensity = 0.4
-    pmrem.dispose()
+    // Só o pacote usa o env map (cartas e efeitos são ShaderMaterial/MeshBasicMaterial). Com
+    // `scene.environment`, o three aplica esta intensidade e ignora `material.envMapIntensity`.
+    this.scene.environment = studioEnvironment()
+    this.scene.environmentIntensity = 1.5
 
     this.dim = new Mesh(
       this.unitPlane,
@@ -261,7 +263,10 @@ export class OpeningScene {
       this.stage.remove(this.pack.root)
       this.pack.dispose()
     }
-    this.pack = new Pack(this.unitPlane, { name: art.name, subtitle: art.subtitle, logo })
+    this.pack = new Pack(
+      { name: art.name, subtitle: art.subtitle, logo },
+      this.renderer.capabilities.getMaxAnisotropy(),
+    )
     this.packKey = key
     this.pack.tilt.add(this.tearLine.group)
     this.stage.add(this.pack.root)
@@ -790,16 +795,40 @@ export class OpeningScene {
   }
 
   /** Mais da metade de 30 frames acima de 20 ms: cai um degrau de pixel ratio (2 → 1,5 → 1), nunca sobe. */
+  /**
+   * Maioria dos frames acima do orçamento (não a média: um soluço isolado não derruba o dpr) → desce um
+   * degrau. Janelas seguidas com todos os frames rápidos → sobe um degrau; se estourar logo depois de
+   * subir, aquele degrau vira teto, para não oscilar. Sem a subida, um engasgo passageiro (outro app,
+   * troca de aba) deixava o pacote embaçado para sempre.
+   */
   private checkBudget(): void {
-    if (this.frameCount < FRAME_WARMUP || this.dprIndex >= this.dprSteps.length - 1) return
-    // Maioria dos frames acima do orçamento, não a média: um soluço isolado (GC, captura) não derruba o dpr.
+    if (this.frameCount < FRAME_WARMUP) return
     let over = 0
-    for (let i = 0; i < FRAME_WINDOW; i++) if (this.frameTimes[i]! > FRAME_BUDGET_MS) over++
-    if (over > FRAME_WINDOW / 2) {
-      this.dprIndex++
-      const dpr = this.dprSteps[this.dprIndex]!
-      this.renderer.setPixelRatio(dpr)
-      this.burst.setPixelRatio(dpr)
+    let fast = 0
+    for (let i = 0; i < FRAME_WINDOW; i++) {
+      const t = this.frameTimes[i]!
+      if (t > FRAME_BUDGET_MS) over++
+      else if (t < FRAME_RECOVER_MS) fast++
     }
+    this.windowsSinceUp++
+    if (over > FRAME_WINDOW / 2) {
+      this.fastWindows = 0
+      if (this.windowsSinceUp <= 2) this.dprCeiling = this.dprIndex + 1
+      if (this.dprIndex < this.dprSteps.length - 1) this.setDpr(this.dprIndex + 1)
+      return
+    }
+    this.fastWindows = fast === FRAME_WINDOW ? this.fastWindows + 1 : 0
+    if (this.fastWindows >= FRAME_RECOVER_WINDOWS && this.dprIndex > this.dprCeiling) {
+      this.fastWindows = 0
+      this.windowsSinceUp = 0
+      this.setDpr(this.dprIndex - 1)
+    }
+  }
+
+  private setDpr(index: number): void {
+    this.dprIndex = index
+    const dpr = this.dprSteps[index]!
+    this.renderer.setPixelRatio(dpr)
+    this.burst.setPixelRatio(dpr)
   }
 }

@@ -1,6 +1,7 @@
 import {
   CanvasTexture,
   ClampToEdgeWrapping,
+  EquirectangularReflectionMapping,
   LinearFilter,
   LinearMipmapLinearFilter,
   NoColorSpace,
@@ -99,4 +100,34 @@ export function loadImage(url: string | null): Promise<HTMLImageElement | null> 
     img.onerror = () => resolve(null)
     img.src = url
   })
+}
+
+/**
+ * Ambiente "estúdio" para o foil do pacote: equirect LDR em canvas com um softbox à frente e acima
+ * (+z, a frente do pacote, cai em u = 0,75), horizonte cinza e chão escuro. Sem pontos quentes: com o
+ * RoomEnvironment (painéis HDR de intensidade 50–100) qualquer especular no estufado saturava em branco.
+ */
+export function studioEnvironment(): CanvasTexture {
+  const tex = canvasTexture(512, 256, (ctx, w, h) => {
+    const sky = ctx.createLinearGradient(0, 0, 0, h)
+    sky.addColorStop(0, '#e8edf5')
+    sky.addColorStop(0.45, '#a8adb8')
+    sky.addColorStop(0.55, '#8c909c')
+    sky.addColorStop(1, '#3c3f48')
+    ctx.fillStyle = sky
+    ctx.fillRect(0, 0, w, h)
+    const key = ctx.createRadialGradient(w * 0.75, h * 0.27, 0, w * 0.75, h * 0.27, w * 0.33)
+    key.addColorStop(0, 'rgba(255,255,255,1)')
+    key.addColorStop(0.5, 'rgba(255,255,255,.7)')
+    key.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = key
+    ctx.fillRect(0, 0, w, h)
+    const rim = ctx.createRadialGradient(w * 0.2, h * 0.47, 0, w * 0.2, h * 0.47, w * 0.16)
+    rim.addColorStop(0, 'rgba(255,255,255,.5)')
+    rim.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = rim
+    ctx.fillRect(0, 0, w, h)
+  })
+  tex.mapping = EquirectangularReflectionMapping
+  return tex
 }

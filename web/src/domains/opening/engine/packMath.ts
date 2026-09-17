@@ -1,22 +1,56 @@
 import { MS } from '../../../shared/lib/motion'
 
-export const TEETH = 18
+export const PACK_ASPECT = 1.62
+/** A tira ocupa os 21% do topo. */
+export const STRIP_FRAC = 0.21
+
+/** Volume da frente (fração da largura): 0 nas costuras (topo/fundo) e nas laterais, máximo no centro. */
+export const PUFF = 0.07
+export const SEAL_TOP = 0.05
+export const SEAL_BOTTOM = 0.95
+
+/**
+ * Altura z da frente em (u, v) ∈ [0,1]² (v para baixo), em fração da largura. Um travesseiro achatado:
+ * raiz em u para ombros redondos, expoente < 1 em v para um platô longo entre as costuras.
+ */
+export function packZ(u: number, v: number): number {
+  const t = (v - SEAL_TOP) / (SEAL_BOTTOM - SEAL_TOP)
+  if (t <= 0 || t >= 1 || u <= 0 || u >= 1) return 0
+  return PUFF * Math.sqrt(Math.sin(Math.PI * u)) * Math.sin(Math.PI * t) ** 0.7
+}
+
+/** PRNG determinístico (mulberry32) para a arte procedural: o mesmo pacote sai sempre igual. */
+export function mulberry32(seed: number): () => number {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+/** Rasgo (§8.5): dentes grossos. */
+export const TEAR_TEETH = 18
 /** Pontos (x, y) em fração 0..1, y para baixo como no canvas. */
 export type Outline = Array<[number, number]>
 
-/** Corpo: dentes entre 18% e 21% no topo e entre 97% e 100% embaixo (§8.3). */
+/** Corpo: boca rasgada entre 18% e 21% no topo (§8.3); embaixo o corte da costura é reto. */
 export function bodyOutline(): Outline {
   const pts: Outline = []
-  for (let i = 0; i <= TEETH; i++) pts.push([i / TEETH, i % 2 ? 0.21 : 0.18])
-  for (let i = TEETH; i >= 0; i--) pts.push([i / TEETH, i % 2 ? 0.97 : 1])
+  for (let i = 0; i <= TEAR_TEETH; i++) pts.push([i / TEAR_TEETH, i % 2 ? 0.21 : 0.18])
+  pts.push([1, 1], [0, 1])
   return pts
 }
 
-/** Tira: dentes entre 0 e 12% da própria altura; embaixo reta, ou rasgada entre 84% e 100% (§8.5). */
+/** Tira: corte reto no topo; embaixo reta, ou rasgada entre 84% e 100% (§8.5). */
 export function stripOutline(torn: boolean): Outline {
-  const pts: Outline = []
-  for (let i = 0; i <= TEETH; i++) pts.push([i / TEETH, i % 2 ? 0 : 0.12])
-  if (torn) for (let i = TEETH; i >= 0; i--) pts.push([i / TEETH, i % 2 ? 0.84 : 1])
+  const pts: Outline = [
+    [0, 0],
+    [1, 0],
+  ]
+  if (torn) for (let i = TEAR_TEETH; i >= 0; i--) pts.push([i / TEAR_TEETH, i % 2 ? 0.84 : 1])
   else pts.push([1, 1], [0, 1])
   return pts
 }
