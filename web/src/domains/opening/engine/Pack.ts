@@ -22,13 +22,13 @@ const TEX_W = 1024
 /** Segmentos na largura; a altura segue a proporção. Corpo 32×52 + tira 32×11 ≈ 3,7 k triângulos. */
 const SEGMENTS = 32
 
-/** Foil branco: metal reflete a sala (env map), clearcoat dá o verniz, iridescência dá o arco-íris de canto. */
+/** Foil branco: metal reflete o ambiente estúdio, clearcoat dá o verniz, iridescência o arco-íris. */
 const FOIL = {
-  metalness: 0.5,
-  roughness: 0.34,
+  metalness: 0.45,
+  roughness: 0.35,
   clearcoat: 0.5,
   clearcoatRoughness: 0.28,
-  iridescence: 0.4,
+  iridescence: 0.5,
   iridescenceIOR: 1.35,
   iridescenceThicknessRange: [140, 400] as [number, number],
 }
@@ -90,7 +90,7 @@ export class Pack {
       ...FOIL,
       emissive: 0xffffff,
       emissiveMap: this.sweep,
-      emissiveIntensity: 0.14,
+      emissiveIntensity: 0.08,
     })
     this.stripMaterial = new MeshPhysicalMaterial({
       map: this.stripIntact,

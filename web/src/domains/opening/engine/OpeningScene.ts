@@ -5,13 +5,11 @@ import {
   NoToneMapping,
   PerspectiveCamera,
   PlaneGeometry,
-  PMREMGenerator,
   Scene,
   Vector3,
   WebGLRenderer,
   type Texture,
 } from 'three'
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { EASE, MS } from '../../../shared/lib/motion'
 import { cardImage, type PackArt } from '../../catalog/model'
 import type { PackCard } from '../../packs/model'
@@ -44,7 +42,7 @@ import {
 } from './sequence'
 import { tearBegin, tearMove, tearRelease, type Tear } from './tear'
 import { TearLine } from './TearLine'
-import { canvasTexture, loadCardTextures, loadImage } from './textures'
+import { canvasTexture, loadCardTextures, loadImage, studioEnvironment } from './textures'
 import { createTilt, setTiltTarget, updateTilt } from './tilt'
 import { Tweens } from './tween'
 
@@ -174,14 +172,10 @@ export class OpeningScene {
     })
     this.scene.background = this.background
 
-    const pmrem = new PMREMGenerator(this.renderer)
-    const room = new RoomEnvironment()
-    this.scene.environment = pmrem.fromScene(room, 0.04).texture
-    room.dispose()
     // Só o pacote usa o env map (cartas e efeitos são ShaderMaterial/MeshBasicMaterial). Com
     // `scene.environment`, o three aplica esta intensidade e ignora `material.envMapIntensity`.
-    this.scene.environmentIntensity = 1
-    pmrem.dispose()
+    this.scene.environment = studioEnvironment()
+    this.scene.environmentIntensity = 1.5
 
     this.dim = new Mesh(
       this.unitPlane,
