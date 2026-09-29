@@ -12,6 +12,7 @@ import {
 import { withAlpha } from '../../../shared/lib/theme'
 import type { PackCard } from '../../packs/model'
 import { HOLO_FRAGMENT, HOLO_VERTEX, holoPreset } from './holo.glsl'
+import { drawCardBack } from './cardBack'
 import { canvasTexture } from './textures'
 
 export const CARD_ASPECT = 1.4
@@ -143,10 +144,10 @@ export class Card {
   }
 }
 
-/** Texturas compartilhadas por todas as cartas: verso (design do protótipo), badge "Nova", glow do suspense. */
+/** Texturas compartilhadas por todas as cartas: verso (estilo TCG global), badge "Nova", glow do suspense. */
 export function createCardAssets(colors: { gold: string; rose: string }): CardAssets {
   const back = canvasTexture(512, Math.round(512 * CARD_ASPECT), (ctx, w, h) =>
-    drawBack(ctx, w, h, colors.gold),
+    drawCardBack(ctx, w, h, w * CARD_RADIUS),
   )
   const badge = canvasTexture(256, 100, (ctx, w, h) => {
     ctx.shadowColor = withAlpha(colors.rose, 0.4)
@@ -171,55 +172,4 @@ export function createCardAssets(colors: { gold: string; rose: string }): CardAs
     ctx.fillRect(0, 0, w, h)
   })
   return { back, badge, glow }
-}
-
-function drawBack(ctx: CanvasRenderingContext2D, w: number, h: number, gold: string): void {
-  const r = w * CARD_RADIUS
-  const em = w / 18
-  ctx.beginPath()
-  ctx.roundRect(0, 0, w, h, r)
-  ctx.clip()
-  const g = ctx.createRadialGradient(w / 2, h * 0.4, 0, w / 2, h * 0.4, w * 0.9)
-  g.addColorStop(0, '#3f31ab')
-  g.addColorStop(0.55, '#221b62')
-  g.addColorStop(1, '#120e3a')
-  ctx.fillStyle = g
-  ctx.fillRect(0, 0, w, h)
-  ctx.save()
-  ctx.translate(w / 2, h / 2)
-  ctx.fillStyle = 'rgba(255,255,255,.055)'
-  for (let a = 0; a < 360; a += 12) {
-    ctx.beginPath()
-    ctx.moveTo(0, 0)
-    ctx.arc(0, 0, w * 1.2, (a * Math.PI) / 180, ((a + 6) * Math.PI) / 180)
-    ctx.closePath()
-    ctx.fill()
-  }
-  ctx.rotate(Math.PI / 4)
-  const s = w * 0.32
-  const d = ctx.createRadialGradient(0, 0, 0, 0, 0, s * 0.7)
-  d.addColorStop(0, '#fff3c4')
-  d.addColorStop(0.45, '#f6c744')
-  d.addColorStop(1, '#8a5f05')
-  ctx.shadowColor = 'rgba(246,199,68,.55)'
-  ctx.shadowBlur = em * 1.4
-  ctx.fillStyle = d
-  ctx.beginPath()
-  ctx.roundRect(-s / 2, -s / 2, s, s, s * 0.18)
-  ctx.fill()
-  ctx.shadowBlur = 0
-  ctx.lineWidth = em * 0.3
-  ctx.strokeStyle = gold
-  ctx.stroke()
-  ctx.restore()
-  ctx.lineWidth = em * 0.9
-  ctx.strokeStyle = '#efeaff'
-  ctx.beginPath()
-  ctx.roundRect(0, 0, w, h, r)
-  ctx.stroke()
-  ctx.lineWidth = em * 0.12
-  ctx.strokeStyle = '#b9a7ff'
-  ctx.beginPath()
-  ctx.roundRect(em * 0.45, em * 0.45, w - em * 0.9, h - em * 0.9, r * 0.8)
-  ctx.stroke()
 }
