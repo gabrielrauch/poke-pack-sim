@@ -63,8 +63,10 @@ varying vec2 vUv;
 varying vec3 vLook;
 
 const float ASPECT = 1.4;
-// Retângulo da arte (§7.2): 8%–92% da largura, 12%–55% da altura a partir do topo (uv.y cresce para cima).
-const vec4 ART = vec4(0.08, 0.45, 0.92, 0.88);
+// Retângulo da arte no layout Scarlet & Violet: 8%–92% da largura, 10%–48% da altura a partir do topo
+// (uv.y cresce para cima). Medido na face real; com 12%–55% a máscara pegava a faixa do "Nº 0007..."
+// e deixava de fora o topo da arte.
+const vec4 ART = vec4(0.08, 0.52, 0.92, 0.90);
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 vec3 rainbow(float t) { return 0.5 + 0.5 * cos(6.2831853 * (t + vec3(0.0, 0.33, 0.67))); }
