@@ -1,8 +1,10 @@
 import { mulberry32 } from './prng'
+import { designPack, extractPalette, type PackDesign, type Palette } from './packDesign'
 
 /**
- * Arte procedural do booster (§3: `boosters` vem nulo). Inspirada no 151: foil branco, silhuetas
- * coloridas, Mew com Pokébola, logotipo no topo, faixa vermelha. Só canvas 2D; sem three, sem React.
+ * Arte procedural do booster (§3: `boosters` vem nulo), gerada a partir do logo do set: a paleta sai dos
+ * pixels do logo e o motivo de fundo da semente do nome (`packDesign.ts`). O logo é o herói no centro e
+ * se repete em marca d'água. Só canvas 2D; sem three, sem React.
  */
 export type PackArtSource = { name: string; subtitle: string; logo: HTMLImageElement | null }
 
@@ -12,22 +14,46 @@ export const FONT = "'Fredoka', system-ui, sans-serif"
 
 type Ctx = CanvasRenderingContext2D
 
-const PINK = '#f7bddc'
-const PINK_DARK = '#e08fc1'
-const EYE = '#3b4fb8'
 const BLUE = '#2b5fb7'
-const CONFETTI = ['#ff9ec7', '#8fd0ff', '#ffd166', '#9be7b0', '#c9a8ff', '#ffb27a']
+/** Lado da amostra do logo para a paleta (o bastante para as cores, barato de ler). */
+const SAMPLE = 48
+
+const palettes = new WeakMap<HTMLImageElement, Palette>()
+
+/** Paleta do logo, uma vez por imagem. Canvas contaminado (sem CORS) ou sem logo → paleta vazia. */
+export function logoPalette(logo: HTMLImageElement | null): Palette {
+  if (!logo) return { swatches: [], ink: null }
+  const cached = palettes.get(logo)
+  if (cached) return cached
+  let palette: Palette = { swatches: [], ink: null }
+  try {
+    const c = document.createElement('canvas')
+    const scale = SAMPLE / Math.max(logo.naturalWidth, logo.naturalHeight, 1)
+    c.width = Math.max(1, Math.round(logo.naturalWidth * scale))
+    c.height = Math.max(1, Math.round(logo.naturalHeight * scale))
+    const ctx = c.getContext('2d', { willReadFrequently: true })
+    if (ctx) {
+      ctx.drawImage(logo, 0, 0, c.width, c.height)
+      palette = extractPalette(ctx.getImageData(0, 0, c.width, c.height).data)
+    }
+  } catch {
+    // SecurityError: segue com a paleta da semente.
+  }
+  palettes.set(logo, palette)
+  return palette
+}
 
 /** A frente inteira, sem clip e sem boca (o `Pack` recorta e fatia). `h` deve ser `w × PACK_ASPECT`. */
 export function drawPackArt(ctx: Ctx, w: number, h: number, art: PackArtSource): void {
-  drawFoil(ctx, w, h)
-  drawConfetti(ctx, w, h, mulberry32(151))
-  drawGlow(ctx, w * 0.5, h * 0.47, w * 0.42)
-  drawPokeball(ctx, w * 0.5, h * 0.56, w * 0.19)
-  drawMew(ctx, w * 0.55, h * 0.37, w * 0.17)
+  const d = designPack(art.name, logoPalette(art.logo))
+  const heroY = h * 0.5
+  drawFoil(ctx, w, h, d)
+  drawMotif(ctx, w, h, d, heroY)
+  if (art.logo) drawWatermark(ctx, w, h, art.logo, d)
+  drawGlow(ctx, w * 0.5, heroY, w * 0.5, d.glow)
+  drawHero(ctx, w, heroY, art, d)
   drawWordmark(ctx, w * 0.5, h * 0.125, w * 0.115)
-  drawSetLogo(ctx, w, h, art)
-  drawBand(ctx, w, h, art.subtitle)
+  drawBand(ctx, w, h, art.subtitle, d)
   drawHairlines(ctx, w, h)
   drawEdges(ctx, w, h)
 }
@@ -76,26 +102,12 @@ export function drawMouth(ctx: Ctx, w: number, h: number, stripFrac: number): vo
   ctx.fillRect(0, 0, w, h * end)
 }
 
-function ellipse(ctx: Ctx, x: number, y: number, rx: number, ry: number, rot = 0): void {
-  ctx.beginPath()
-  ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2)
-  ctx.fill()
-}
-
-function circle(ctx: Ctx, x: number, y: number, r: number, color: string): void {
-  ctx.fillStyle = color
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, Math.PI * 2)
-  ctx.fill()
-}
-
-/** Foil branco: gradiente frio com uma faixa diagonal mais clara. */
-function drawFoil(ctx: Ctx, w: number, h: number): void {
+/** Foil tingido pela paleta: gradiente claro com uma faixa diagonal mais clara. */
+function drawFoil(ctx: Ctx, w: number, h: number, d: PackDesign): void {
   const g = ctx.createLinearGradient(0, 0, w * 0.3, h)
-  g.addColorStop(0, '#fbfcff')
-  g.addColorStop(0.45, '#e9ecf4')
-  g.addColorStop(0.7, '#f6f7fb')
-  g.addColorStop(1, '#dde2ec')
+  g.addColorStop(0, d.foil[0])
+  g.addColorStop(0.5, d.foil[1])
+  g.addColorStop(1, d.foil[2])
   ctx.fillStyle = g
   ctx.fillRect(0, 0, w, h)
   const sheen = ctx.createLinearGradient(0, h * 0.2, w, h * 0.8)
@@ -106,156 +118,166 @@ function drawFoil(ctx: Ctx, w: number, h: number): void {
   ctx.fillRect(0, 0, w, h)
 }
 
-/** Formas unitárias (raio 1) na origem; só o caminho, quem chama faz `beginPath`/`fill`. */
-const SHAPES: ReadonlyArray<(ctx: Ctx) => void> = [
-  (ctx) => {
-    // criatura: cabeça redonda com duas orelhas
-    ctx.arc(0, 0.1, 0.85, 0, Math.PI * 2)
-    ctx.moveTo(-0.7, -0.4)
-    ctx.lineTo(-0.85, -1.1)
-    ctx.lineTo(-0.15, -0.75)
-    ctx.moveTo(0.7, -0.4)
-    ctx.lineTo(0.85, -1.1)
-    ctx.lineTo(0.15, -0.75)
-  },
-  (ctx) => {
-    // estrela
-    for (let i = 0; i < 10; i++) {
-      const r = i % 2 ? 0.45 : 1
-      const a = (i / 10) * Math.PI * 2 - Math.PI / 2
-      if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r)
-      else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r)
-    }
-    ctx.closePath()
-  },
-  (ctx) => {
-    // gota / chama
-    ctx.moveTo(0, -1)
-    ctx.bezierCurveTo(0.9, -0.1, 0.9, 0.9, 0, 0.9)
-    ctx.bezierCurveTo(-0.9, 0.9, -0.9, -0.1, 0, -1)
-  },
-  (ctx) => {
-    // folha
-    ctx.moveTo(-1, 0.6)
-    ctx.quadraticCurveTo(-0.2, -1.2, 1, -0.7)
-    ctx.quadraticCurveTo(0.6, 0.9, -1, 0.6)
-  },
-  (ctx) => {
-    // anel (Pokébola vista de longe): círculo com furo (sentido inverso)
-    ctx.arc(0, 0, 1, 0, Math.PI * 2)
-    ctx.moveTo(0.4, 0)
-    ctx.arc(0, 0, 0.4, 0, Math.PI * 2, true)
-  },
-]
-
-/** As "silhuetas dos 151": grid hexagonal com jitter, cores pastel, alpha baixo. Determinístico pelo `rnd`. */
-function drawConfetti(ctx: Ctx, w: number, h: number, rnd: () => number): void {
-  const cell = w * 0.085
+/** Motivo de fundo nas cores do logo, centrado no herói. Determinístico pela semente do design. */
+function drawMotif(ctx: Ctx, w: number, h: number, d: PackDesign, cy: number): void {
+  const rnd = mulberry32(d.seed)
+  const colors = [d.primary, d.secondary, d.accent]
+  const cx = w / 2
+  const reach = Math.hypot(w, h)
   ctx.save()
-  ctx.globalAlpha = 0.3
-  for (let row = 0, y = h * 0.04; y < h * 0.78; row++, y += cell * 0.9) {
-    for (let x = (row % 2 ? cell * 0.5 : 0) + cell * 0.2; x < w; x += cell) {
-      const shape = SHAPES[Math.floor(rnd() * SHAPES.length)]!
-      const size = cell * (0.2 + rnd() * 0.13)
-      ctx.save()
-      ctx.translate(x + (rnd() - 0.5) * cell * 0.5, y + (rnd() - 0.5) * cell * 0.5)
-      ctx.rotate(rnd() * Math.PI * 2)
-      ctx.scale(size, size)
-      ctx.fillStyle = CONFETTI[Math.floor(rnd() * CONFETTI.length)]!
-      ctx.beginPath()
-      shape(ctx)
-      ctx.fill()
-      ctx.restore()
+  ctx.beginPath()
+  ctx.rect(0, 0, w, h * 0.8)
+  ctx.clip()
+  ctx.translate(cx, cy)
+  ctx.rotate(d.angle)
+  switch (d.motif) {
+    case 'rays': {
+      const n = 14 + Math.floor(rnd() * 10)
+      ctx.globalAlpha = 0.32
+      for (let i = 0; i < n; i++) {
+        const a0 = (i / n) * Math.PI * 2
+        const a1 = a0 + (Math.PI / n) * (0.6 + rnd() * 0.5)
+        ctx.fillStyle = colors[i % colors.length]!
+        ctx.beginPath()
+        ctx.moveTo(0, 0)
+        ctx.arc(0, 0, reach, a0, a1)
+        ctx.closePath()
+        ctx.fill()
+      }
+      break
+    }
+    case 'stripes': {
+      const step = w * (0.09 + rnd() * 0.05)
+      ctx.globalAlpha = 0.3
+      for (let x = -reach, i = 0; x < reach; x += step, i++) {
+        ctx.fillStyle = colors[i % colors.length]!
+        ctx.fillRect(x, -reach, step * (0.35 + rnd() * 0.3), reach * 2)
+      }
+      break
+    }
+    case 'halftone': {
+      const step = w * 0.05
+      ctx.globalAlpha = 0.4
+      for (let y = -reach / 2; y < reach / 2; y += step) {
+        for (let x = -reach / 2; x < reach / 2; x += step) {
+          const r = step * 0.46 * Math.min(1, Math.hypot(x, y) / (w * 0.75))
+          if (r < 0.5) continue
+          ctx.fillStyle = colors[Math.floor(Math.abs(x + y * 1.7) / step) % colors.length]!
+          ctx.beginPath()
+          ctx.arc(x, y, r, 0, Math.PI * 2)
+          ctx.fill()
+        }
+      }
+      break
+    }
+    case 'shards': {
+      ctx.globalAlpha = 0.34
+      for (let i = 0; i < 26; i++) {
+        const a = rnd() * Math.PI * 2
+        const r0 = w * (0.2 + rnd() * 0.5)
+        const len = w * (0.25 + rnd() * 0.45)
+        const spread = 0.08 + rnd() * 0.14
+        ctx.fillStyle = colors[i % colors.length]!
+        ctx.beginPath()
+        ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0)
+        ctx.lineTo(Math.cos(a - spread) * (r0 + len), Math.sin(a - spread) * (r0 + len))
+        ctx.lineTo(Math.cos(a + spread) * (r0 + len), Math.sin(a + spread) * (r0 + len))
+        ctx.closePath()
+        ctx.fill()
+      }
+      break
+    }
+    case 'rings': {
+      const step = w * (0.07 + rnd() * 0.04)
+      ctx.globalAlpha = 0.34
+      ctx.lineWidth = step * 0.38
+      for (let r = step, i = 0; r < reach; r += step, i++) {
+        ctx.strokeStyle = colors[i % colors.length]!
+        ctx.beginPath()
+        ctx.arc(0, 0, r, 0, Math.PI * 2)
+        ctx.stroke()
+      }
+      break
     }
   }
   ctx.restore()
 }
 
-/** Clareia o centro para o confete não brigar com a arte principal. */
-function drawGlow(ctx: Ctx, cx: number, cy: number, r: number): void {
+/** O próprio logo repetido pequeno em fileiras inclinadas, bem apagado (textura do foil). */
+function drawWatermark(
+  ctx: Ctx,
+  w: number,
+  h: number,
+  logo: HTMLImageElement,
+  d: PackDesign,
+): void {
+  const lw = w * 0.22
+  const lh = (lw * logo.naturalHeight) / Math.max(1, logo.naturalWidth)
+  const stepX = lw * 1.35
+  const stepY = Math.max(lh, w * 0.05) * 1.9
+  ctx.save()
+  ctx.beginPath()
+  ctx.rect(0, 0, w, h * 0.8)
+  ctx.clip()
+  ctx.globalAlpha = 0.1
+  ctx.translate(w / 2, h / 2)
+  ctx.rotate(-d.angle / 2 - 0.2)
+  for (let y = -h, row = 0; y < h; y += stepY, row++) {
+    for (let x = -h + (row % 2) * (stepX / 2); x < h; x += stepX) {
+      ctx.drawImage(logo, x, y, lw, lh)
+    }
+  }
+  ctx.restore()
+}
+
+/** Clareia o centro para o motivo não brigar com o logo. */
+function drawGlow(ctx: Ctx, cx: number, cy: number, r: number, color: string): void {
   const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
   g.addColorStop(0, 'rgba(255,255,255,.95)')
-  g.addColorStop(0.55, 'rgba(255,225,242,.75)')
-  g.addColorStop(1, 'rgba(255,225,242,0)')
+  g.addColorStop(0.5, color)
+  g.addColorStop(1, 'rgba(255,255,255,0)')
+  ctx.save()
+  ctx.globalAlpha = 0.85
   ctx.fillStyle = g
   ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r)
-}
-
-function drawPokeball(ctx: Ctx, cx: number, cy: number, r: number): void {
-  ctx.save()
-  ctx.translate(cx, cy)
-  ctx.fillStyle = 'rgba(60,30,90,.16)'
-  ellipse(ctx, r * 0.05, r * 0.92, r * 0.95, r * 0.2)
-  ctx.beginPath()
-  ctx.arc(0, 0, r, 0, Math.PI * 2)
-  ctx.clip()
-  const top = ctx.createLinearGradient(0, -r, 0, 0)
-  top.addColorStop(0, '#ff6a5c')
-  top.addColorStop(1, '#c81e1e')
-  ctx.fillStyle = top
-  ctx.fillRect(-r, -r, 2 * r, r)
-  const bottom = ctx.createLinearGradient(0, 0, 0, r)
-  bottom.addColorStop(0, '#ffffff')
-  bottom.addColorStop(1, '#d4d9e4')
-  ctx.fillStyle = bottom
-  ctx.fillRect(-r, 0, 2 * r, r)
-  ctx.fillStyle = '#24232c'
-  ctx.fillRect(-r, -r * 0.09, 2 * r, r * 0.18)
-  circle(ctx, 0, 0, r * 0.3, '#24232c')
-  circle(ctx, 0, 0, r * 0.21, '#ffffff')
-  circle(ctx, 0, 0, r * 0.12, '#e2e6ef')
-  ctx.fillStyle = 'rgba(255,255,255,.55)'
-  ellipse(ctx, -r * 0.35, -r * 0.55, r * 0.3, r * 0.14, -0.6)
   ctx.restore()
 }
 
-/**
- * Mew estilizado em coordenadas unitárias (y para baixo, cabeça em cima, pés em ~0.55, orelhas em −1),
- * escalado por `s`. Ordem: cauda atrás, pés, corpo, braços, orelhas, cabeça (cobre a base das orelhas), olhos.
- */
-function drawMew(ctx: Ctx, cx: number, cy: number, s: number): void {
+/** Logo grande no centro (até 80% da largura e 30% da altura) com halo na cor de destaque; sem logo, o nome. */
+function drawHero(ctx: Ctx, w: number, cy: number, art: PackArtSource, d: PackDesign): void {
   ctx.save()
-  ctx.translate(cx, cy)
-  ctx.scale(s, s)
-  ctx.lineJoin = 'round'
-  ctx.lineCap = 'round'
-  ctx.strokeStyle = PINK
-  ctx.lineWidth = 0.14
-  ctx.beginPath()
-  ctx.moveTo(0.28, 0.42)
-  ctx.bezierCurveTo(0.9, 0.62, 1.25, 0.05, 0.8, -0.3)
-  ctx.bezierCurveTo(0.6, -0.46, 0.46, -0.24, 0.62, -0.16)
-  ctx.stroke()
-  ctx.fillStyle = PINK
-  ctx.strokeStyle = PINK_DARK
-  ctx.lineWidth = 0.035
-  const part = (x: number, y: number, rx: number, ry: number, rot: number) => {
-    ctx.beginPath()
-    ctx.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.stroke()
+  if (art.logo) {
+    let lw = w * 0.8
+    let lh = (lw * art.logo.naturalHeight) / Math.max(1, art.logo.naturalWidth)
+    const maxH = w * PACK_ASPECT * 0.3
+    if (lh > maxH) {
+      lw *= maxH / lh
+      lh = maxH
+    }
+    const x = (w - lw) / 2
+    const y = cy - lh / 2
+    ctx.shadowColor = d.accent
+    ctx.shadowBlur = w * 0.06
+    ctx.drawImage(art.logo, x, y, lw, lh)
+    ctx.shadowColor = 'rgba(0,0,0,.3)'
+    ctx.shadowBlur = w * 0.02
+    ctx.shadowOffsetY = w * 0.008
+    ctx.drawImage(art.logo, x, y, lw, lh)
+  } else {
+    const size = w * 0.16
+    ctx.font = `700 ${size}px ${FONT}`
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.lineJoin = 'round'
+    ctx.shadowColor = d.accent
+    ctx.shadowBlur = w * 0.05
+    ctx.strokeStyle = d.ink
+    ctx.lineWidth = size * 0.16
+    ctx.strokeText(art.name, w / 2, cy, w * 0.86)
+    ctx.shadowBlur = 0
+    ctx.fillStyle = d.primary
+    ctx.fillText(art.name, w / 2, cy, w * 0.86)
   }
-  part(-0.14, 0.53, 0.18, 0.1, -0.25)
-  part(0.24, 0.55, 0.18, 0.1, 0.25)
-  part(0.04, 0.2, 0.28, 0.36, 0.1)
-  part(-0.28, 0.1, 0.08, 0.17, 0.5)
-  part(0.32, 0.06, 0.08, 0.17, -0.5)
-  for (const d of [-1, 1]) {
-    ctx.beginPath()
-    ctx.moveTo(d * 0.3, -0.5)
-    ctx.quadraticCurveTo(d * 0.52, -0.85, d * 0.46, -1.02)
-    ctx.quadraticCurveTo(d * 0.3, -0.82, d * 0.08, -0.62)
-    ctx.closePath()
-    ctx.fill()
-    ctx.stroke()
-  }
-  part(0, -0.35, 0.44, 0.37, 0)
-  ctx.fillStyle = EYE
-  ellipse(ctx, -0.17, -0.36, 0.075, 0.11)
-  ellipse(ctx, 0.17, -0.36, 0.075, 0.11)
-  ctx.fillStyle = '#fff'
-  ellipse(ctx, -0.19, -0.4, 0.025, 0.035)
-  ellipse(ctx, 0.15, -0.4, 0.025, 0.035)
   ctx.restore()
 }
 
@@ -279,39 +301,16 @@ function drawWordmark(ctx: Ctx, cx: number, cy: number, size: number): void {
   ctx.restore()
 }
 
-/** Logo do set (imagem do catálogo, limitada a 34% da largura e 15% de altura) ou o nome. */
-function drawSetLogo(ctx: Ctx, w: number, h: number, art: PackArtSource): void {
-  ctx.save()
-  ctx.shadowColor = 'rgba(0,0,0,.25)'
-  ctx.shadowBlur = w * 0.02
-  if (art.logo) {
-    let lw = w * 0.34
-    let lh = (lw * art.logo.naturalHeight) / art.logo.naturalWidth
-    if (lh > w * 0.15) {
-      lw *= (w * 0.15) / lh
-      lh = w * 0.15
-    }
-    ctx.drawImage(art.logo, (w - lw) / 2, h * 0.74 - lh / 2, lw, lh)
-  } else {
-    ctx.fillStyle = BLUE
-    ctx.font = `700 ${w * 0.1}px ${FONT}`
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(art.name, w / 2, h * 0.74)
-  }
-  ctx.restore()
-}
-
-/** Faixa vermelha do rodapé com filete dourado e o subtítulo. */
-function drawBand(ctx: Ctx, w: number, h: number, subtitle: string): void {
+/** Faixa do rodapé na cor principal escurecida, com filete na cor de destaque e o subtítulo. */
+function drawBand(ctx: Ctx, w: number, h: number, subtitle: string, d: PackDesign): void {
   const y0 = h * 0.8
   const y1 = h * 0.93
   const g = ctx.createLinearGradient(0, y0, 0, y1)
-  g.addColorStop(0, '#e0403a')
-  g.addColorStop(1, '#a61d20')
+  g.addColorStop(0, d.band[0])
+  g.addColorStop(1, d.band[1])
   ctx.fillStyle = g
   ctx.fillRect(0, y0, w, y1 - y0)
-  ctx.fillStyle = '#f2c84b'
+  ctx.fillStyle = d.trim
   ctx.fillRect(0, y0, w, h * 0.006)
   ctx.fillStyle = '#fff'
   ctx.font = `600 ${w * 0.055}px ${FONT}`
