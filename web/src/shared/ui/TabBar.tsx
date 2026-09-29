@@ -12,7 +12,7 @@ const TABS = [
   },
 ] as const
 
-/** Barra fixa embaixo: Início, Álbum, Histórico. A abertura não tem barra (§7.1). */
+/** Barra fixa embaixo com botões redondos (Início, Álbum, Histórico). A abertura não tem barra (§7.1). */
 export function TabBar() {
   const path = usePathname()
   return (
@@ -24,9 +24,11 @@ export function TabBar() {
           className={s.tab}
           aria-current={path === t.to || path.startsWith(`${t.to}/`) ? 'page' : undefined}
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d={t.d} />
-          </svg>
+          <span className={s.icon}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d={t.d} />
+            </svg>
+          </span>
           <span>{t.label}</span>
         </Link>
       ))}

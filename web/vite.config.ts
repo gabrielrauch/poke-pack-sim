@@ -13,8 +13,8 @@ export default defineConfig({
         short_name: 'pack-sim',
         start_url: '/',
         display: 'standalone',
-        background_color: '#15123a',
-        theme_color: '#15123a',
+        background_color: '#ebebeb',
+        theme_color: '#ebebeb',
         lang: 'pt-BR',
         icons: [
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
