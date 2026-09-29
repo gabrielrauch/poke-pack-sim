@@ -324,3 +324,93 @@ a.btn {
 .summary:focus {
   outline: none;
 }
+
+/* ---------- bancada de material do /lab ---------- */
+.bench {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(300px, 1fr) auto;
+  gap: 12px;
+}
+@media (min-width: 820px) {
+  .bench {
+    grid-template-rows: none;
+    grid-template-columns: 1fr 340px;
+  }
+}
+.benchView {
+  position: relative;
+  min-height: 0;
+  touch-action: none;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.benchView[data-dark] {
+  background: radial-gradient(circle at 50% 18%, var(--scene-bg-2), var(--scene-bg) 70%);
+}
+.benchPanel {
+  overflow: auto;
+  max-height: 46vh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  color: var(--ink);
+}
+@media (min-width: 820px) {
+  .benchPanel {
+    max-height: none;
+  }
+}
+.benchGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.benchGroup legend {
+  font-weight: 600;
+  padding-right: 8px;
+}
+.benchRow {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 44px;
+  align-items: center;
+  gap: 8px;
+}
+.benchRow select {
+  grid-column: 2 / 4;
+  font: inherit;
+  padding: 4px 6px;
+  border-radius: 8px;
+}
+.benchRow output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-dim);
+}
+.benchChecks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.benchChecks label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.benchActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

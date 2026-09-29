@@ -13,15 +13,32 @@ it('mouse: relativo ao centro do retângulo', () => {
   expect(tiltFromPointer(-50, 500, rect)).toEqual([-1, 1])
 })
 
-it('lerp 0,1 rumo ao alvo e avisa quando assentou', () => {
+it('mola: sai rumo ao alvo, passa um pouco dele e assenta', () => {
   const t = createTilt()
   setTiltTarget(t, 1, -1)
   expect(updateTilt(t)).toBe(true)
-  expect(t.x).toBeCloseTo(0.1)
-  expect(t.y).toBeCloseTo(-0.1)
-  for (let i = 0; i < 200; i++) updateTilt(t)
-  expect(t.x).toBeCloseTo(1, 3)
+  expect(t.x).toBeGreaterThan(0)
+  expect(t.y).toBeLessThan(0)
+  let peak = 0
+  for (let i = 0; i < 600 && updateTilt(t); i++) peak = Math.max(peak, t.x)
+  expect(peak).toBeGreaterThan(1)
+  expect(peak).toBeLessThan(1.15)
+  expect(t).toMatchObject({ x: 1, y: -1, vx: 0, vy: 0 })
   expect(updateTilt(t)).toBe(false)
+})
+
+it('mola: frame longo não explode e mais amortecimento não passa do alvo', () => {
+  const t = createTilt()
+  setTiltTarget(t, 1, 0)
+  updateTilt(t, 5000)
+  expect(Math.abs(t.x)).toBeLessThan(1)
+  const firm = createTilt()
+  setTiltTarget(firm, 1, 0)
+  let peak = 0
+  for (let i = 0; i < 600 && updateTilt(firm, 16, { stiffness: 100, damping: 40 }); i++) {
+    peak = Math.max(peak, firm.x)
+  }
+  expect(peak).toBeLessThanOrEqual(1)
 })
 
 it('clampa o alvo', () => {
