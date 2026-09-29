@@ -1,13 +1,15 @@
 import { useMemo } from 'react'
 import { useMe, useSession } from '../../auth/hooks'
 import { useCatalog, useImage } from '../../catalog/hooks'
-import { DEFAULT_SET, packArt } from '../../catalog/model'
+import { packArt, SETS } from '../../catalog/model'
+import { selectSet, useSelectedSet } from '../../catalog/selectedSet'
 import { classifyOpenError, openFailureText } from '../model'
 import { HomeView } from './HomeView'
 
 export default function HomeScreen() {
   const me = useMe(useSession())
-  const catalog = useCatalog(DEFAULT_SET)
+  const setId = useSelectedSet()
+  const catalog = useCatalog(setId)
   // `packArt` cria um objeto novo a cada render; sem memo o `ref` do canvas repintaria toda hora.
   const art = useMemo(() => (catalog.data ? packArt(catalog.data) : null), [catalog.data])
   const logo = useImage(art?.logo ?? null)
@@ -18,6 +20,9 @@ export default function HomeScreen() {
       art={art}
       logo={logo.data ?? null}
       failure={failure}
+      sets={SETS}
+      setId={setId}
+      onSet={selectSet}
       onRetry={() => void me.refetch()}
     />
   )

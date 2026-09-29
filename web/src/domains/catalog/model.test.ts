@@ -7,6 +7,8 @@ import {
   isHit,
   packArt,
   proxiedImage,
+  resolveSet,
+  SETS,
 } from './model'
 
 it('hit tiers vêm da recipe sv', () => {
@@ -39,4 +41,11 @@ it('arte procedural do pacote a partir do catálogo (logo pelo passthrough)', ()
   })
   expect(packArt({ name: 'X', logo: null }).logo).toBeNull()
   expect(DEFAULT_SET).toBe('sv03.5')
+})
+
+it('resolveSet mantém um set da lista e cai no 151 fora dela', () => {
+  expect(resolveSet('sv02')).toBe('sv02')
+  expect(resolveSet(null)).toBe('sv03.5')
+  expect(resolveSet('swsh12')).toBe('sv03.5')
+  expect(SETS[0]?.id).toBe(DEFAULT_SET)
 })

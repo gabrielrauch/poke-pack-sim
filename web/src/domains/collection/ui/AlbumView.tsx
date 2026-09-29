@@ -1,5 +1,6 @@
 import sh from '../../../shared/ui/shared.module.css'
-import { cardImage, TIER_LABEL, type Tier } from '../../catalog/model'
+import { cardImage, TIER_LABEL, type SetInfo, type Tier } from '../../catalog/model'
+import { SetPicker } from '../../catalog/ui/SetPicker'
 import { filterByTier, progressText, type AlbumCard } from '../model'
 import { CardSheet } from './CardSheet'
 import s from './collection.module.css'
@@ -14,6 +15,9 @@ export function AlbumView({
   selected,
   onSelect,
   offline,
+  sets,
+  setId,
+  onSet,
 }: {
   setName: string
   album: readonly AlbumCard[] | null
@@ -23,6 +27,9 @@ export function AlbumView({
   selected: AlbumCard | null
   onSelect: (card: AlbumCard | null) => void
   offline: boolean
+  sets: readonly SetInfo[]
+  setId: string
+  onSet: (id: string) => void
 }) {
   return (
     <main className={sh.screen}>
@@ -30,6 +37,7 @@ export function AlbumView({
         <h1>{setName || 'Álbum'}</h1>
         <b className={s.progress}>{album ? progressText(album) : ''}</b>
       </header>
+      {sets.length > 1 && <SetPicker sets={sets} selected={setId} onSelect={onSet} />}
       {album && (
         <label className={s.filter}>
           Raridade

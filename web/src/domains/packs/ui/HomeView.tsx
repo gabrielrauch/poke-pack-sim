@@ -2,24 +2,31 @@ import { PATHS } from '../../../shared/lib/router'
 import { Link } from '../../../shared/ui/Link'
 import sh from '../../../shared/ui/shared.module.css'
 import type { Me } from '../../auth/model'
-import type { PackArt } from '../../catalog/model'
+import type { PackArt, SetInfo } from '../../catalog/model'
+import { SetPicker } from '../../catalog/ui/SetPicker'
 import { openedCountText, quotaText, refillText, type FailureText } from '../model'
 import { PackPreview } from './PackPreview'
 import s from './packs.module.css'
 
-/** Início (§7.1): booster, contador, hora da recarga. Sem pacotes o booster apaga e o botão espera. */
+/** Início (§7.1): seletor de set, booster, contador, hora da recarga. Sem pacotes o booster apaga e o botão espera. */
 export function HomeView({
   me,
   art,
   logo,
   failure,
   onRetry,
+  sets,
+  setId,
+  onSet,
 }: {
   me: Me | null
   art: PackArt | null
   logo: HTMLImageElement | null
   failure: FailureText | null
   onRetry: () => void
+  sets: readonly SetInfo[]
+  setId: string
+  onSet: (id: string) => void
 }) {
   const none = me !== null && me.packs_available <= 0
   const canOpen = me !== null && me.packs_available > 0 && failure === null
@@ -29,6 +36,7 @@ export function HomeView({
         <h1>{me ? `Olá, ${me.name}` : 'Olá'}</h1>
         <span className={sh.muted}>{me ? openedCountText(me.total_packs) : ''}</span>
       </header>
+      {sets.length > 1 && <SetPicker sets={sets} selected={setId} onSelect={onSet} />}
       {!canOpen ? (
         <div className={s.packWrap}>
           <PackPreview art={art} logo={logo} dimmed={none} />

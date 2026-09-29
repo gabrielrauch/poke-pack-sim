@@ -4,3 +4,4 @@ export { missingTiers, parseRecipe, type Pool, type Recipe, type Slot } from './
 export { recipeForSet } from './recipes'
 export { applyRefill, type Allowance, type RefillState } from './refill'
 export { createRng, pickWeighted, seedFromBytes, type Rng, type Seed } from './rng'
+export { DEFAULT_SET_ID, SETS, setInfo, type SetInfo } from './sets'

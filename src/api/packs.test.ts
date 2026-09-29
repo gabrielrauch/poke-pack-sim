@@ -148,10 +148,21 @@ describe('POST /api/packs', () => {
     expect(((await res.json()) as PackResponse).packs_available).toBe(24)
   })
 
-  it('returns 404 for an unknown set or a series without recipe', async () => {
+  it('returns 404 for a set outside the list, without charging', async () => {
     await seedUser({ packs_available: 2, last_refill_date: '2026-09-16T12:00:00.000Z' })
     expect((await open('pack-0008', 'zz9')).status).toBe(404)
     expect((await open('pack-0009', 'swsh12')).status).toBe(404)
+    // Série com recipe, mas fora da lista liberada.
+    expect((await open('pack-0011', 'sv04.5')).status).toBe(404)
+    const user = await env.DB.prepare('SELECT packs_available FROM users WHERE id = ?')
+      .bind('u1')
+      .first<{ packs_available: number }>()
+    expect(user?.packs_available).toBe(2)
+  })
+
+  it('returns 404 for a listed set the provider does not know', async () => {
+    await seedUser({ packs_available: 2, last_refill_date: '2026-09-16T12:00:00.000Z' })
+    expect((await open('pack-0012', 'sv02')).status).toBe(404)
   })
 
   it('maps provider failures to 503 without charging', async () => {

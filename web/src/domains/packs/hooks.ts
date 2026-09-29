@@ -7,7 +7,7 @@ import { fetchHistory, openPack } from './api'
  */
 export function useOpenPack(setId: string, packId: string) {
   return useQuery({
-    queryKey: ['pack', packId],
+    queryKey: ['pack', setId, packId],
     queryFn: () => openPack(setId, packId),
     staleTime: Infinity,
     refetchOnReconnect: false,

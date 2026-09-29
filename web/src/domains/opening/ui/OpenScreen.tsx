@@ -3,7 +3,8 @@ import { PATHS } from '../../../shared/lib/router'
 import { hasWebGL2 } from '../../../shared/lib/webgl'
 import { Link } from '../../../shared/ui/Link'
 import { useCatalog } from '../../catalog/hooks'
-import { DEFAULT_SET, packArt } from '../../catalog/model'
+import { packArt } from '../../catalog/model'
+import { useSelectedSet } from '../../catalog/selectedSet'
 import { useOpenPack } from '../../packs/hooks'
 import {
   againLabel,
@@ -29,8 +30,10 @@ const forceFallback = () =>
 export default function OpenScreen() {
   const [packId, setPackId] = useState(newPackId)
   const [finished, setFinished] = useState(false)
-  const catalog = useCatalog(DEFAULT_SET)
-  const opened = useOpenPack(DEFAULT_SET, packId)
+  // O set vem do seletor do Início; a abertura em si não troca de set.
+  const setId = useSelectedSet()
+  const catalog = useCatalog(setId)
+  const opened = useOpenPack(setId, packId)
   const webgl = useMemo(() => !forceFallback() && hasWebGL2(), [])
   // Memo por primitivos: um refetch do catálogo não pode gerar outro objeto `art` (isso re-apresentaria o pacote no meio da sequência).
   const setName = catalog.data?.name

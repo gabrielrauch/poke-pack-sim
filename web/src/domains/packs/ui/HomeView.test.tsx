@@ -1,6 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it } from 'vitest'
+import { SETS } from '../../catalog/model'
 import { HomeView } from './HomeView'
+
+const picker = { sets: SETS, setId: 'sv02', onSet: () => {} }
 
 const me = {
   id: 'u1',
@@ -14,12 +17,14 @@ const me = {
 
 it('com pacotes: saudação, contador e botão para /abrir', () => {
   const html = renderToStaticMarkup(
-    <HomeView me={me} art={null} logo={null} failure={null} onRetry={() => {}} />,
+    <HomeView me={me} art={null} logo={null} failure={null} onRetry={() => {}} {...picker} />,
   )
   expect(html).toContain('Olá, Ela')
   expect(html).toContain('3 pacotes para abrir')
   expect(html).toContain('href="/abrir"')
   expect(html).toContain('12 pacotes abertos')
+  expect(html).toContain('aria-pressed="true">Evoluções em Paldea</button>')
+  expect(html).toContain('aria-pressed="false">151</button>')
 })
 
 it('sem pacotes: pacote apagado e botão desabilitado', () => {
@@ -30,6 +35,7 @@ it('sem pacotes: pacote apagado e botão desabilitado', () => {
       logo={null}
       failure={null}
       onRetry={() => {}}
+      {...picker}
     />,
   )
   expect(html).toContain('Sem pacotes agora')
@@ -45,6 +51,7 @@ it('erro: mostra o texto e o botão de tentar de novo', () => {
       logo={null}
       failure={{ title: 'Sem conexão', detail: 'x', retry: true }}
       onRetry={() => {}}
+      {...picker}
     />,
   )
   expect(html).toContain('Sem conexão')
