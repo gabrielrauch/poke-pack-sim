@@ -9,15 +9,21 @@
 }
 .access h1 {
   font-size: 26px;
+  font-weight: 600;
 }
 .detail {
   color: var(--ink-dim);
   max-width: 34ch;
 }
+/* O formulário fica num bloco branco, como as janelas de configuração do Switch 2. */
 .form {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   margin-top: 8px;
+  padding: 20px;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 .form label {
   font-size: 14px;
@@ -26,36 +32,36 @@
 .input {
   font: inherit;
   padding: 12px 14px;
-  border-radius: 12px;
-  border: 2px solid color-mix(in srgb, var(--ink) 20%, transparent);
-  background: color-mix(in srgb, var(--bg) 70%, #fff 30%);
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  background: var(--surface-2);
   color: var(--ink);
-  width: min(88vw, 360px);
+  width: min(80vw, 340px);
 }
 .input[aria-invalid='true'] {
-  border-color: var(--rose);
+  border-color: var(--danger);
 }
 .bad {
-  color: var(--rose);
+  color: var(--danger);
   font-size: 14px;
 }
 .btn {
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 17px;
-  padding: 14px 28px;
+  padding: 14px 32px;
   border: 0;
   border-radius: 999px;
-  background: var(--violet);
-  color: #fff;
+  background: var(--accent);
+  color: var(--on-accent);
   cursor: pointer;
 }
 .btn:disabled {
-  opacity: 0.55;
+  opacity: 0.4;
   cursor: default;
 }
 .btn:focus-visible,
 .input:focus-visible {
-  outline: 3px solid var(--rose);
+  outline: 4px solid var(--focus);
   outline-offset: 3px;
 }

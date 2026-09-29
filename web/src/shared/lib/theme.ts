@@ -8,14 +8,14 @@ const FALLBACK: ThemeColors = {
   violet: '#9a7cff',
 }
 
-/** Lê as CSS vars do tema uma vez (a engine não conhece CSS). */
+/** Lê as CSS vars do tema uma vez (a engine não conhece CSS). O fundo da cena vem de `--scene-bg*`. */
 export function readThemeColors(): ThemeColors {
   if (typeof document === 'undefined') return FALLBACK
   const style = getComputedStyle(document.documentElement)
   const read = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback
   return {
-    bg: read('--bg', FALLBACK.bg),
-    bg2: read('--bg-2', FALLBACK.bg2),
+    bg: read('--scene-bg', FALLBACK.bg),
+    bg2: read('--scene-bg-2', FALLBACK.bg2),
     gold: read('--gold', FALLBACK.gold),
     rose: read('--rose', FALLBACK.rose),
     violet: read('--violet', FALLBACK.violet),

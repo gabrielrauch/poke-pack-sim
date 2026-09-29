@@ -3,14 +3,57 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 10px;
+  gap: 12px;
 }
 .head {
   align-self: stretch;
 }
+.user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.user h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Ícone de usuário redondo no canto, como no Switch 2. */
+.avatar {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #ff5a4f, #e60012);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+  box-shadow:
+    0 0 0 3px var(--surface),
+    var(--shadow);
+}
+/* Bloco grande do jogo em destaque: o booster fica num fundo cinza dentro do cartão branco. */
+.stage {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 22px;
+}
 .packWrap {
-  display: block;
-  margin: 8px 0 14px;
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  margin-bottom: 8px;
+  padding: 22px 0;
+  border-radius: calc(var(--radius) - 6px);
+  background: radial-gradient(90% 80% at 50% 30%, var(--bg-2), var(--surface-2));
+}
+.packWrap > * {
   animation: bob 3.4s ease-in-out infinite;
 }
 @keyframes bob {
@@ -23,32 +66,31 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .packWrap {
+  .packWrap > * {
     animation: none;
   }
 }
 .pack {
   display: block;
-  width: min(56vw, 230px, 36vh);
+  width: min(52vw, 220px, 34vh);
   height: auto;
   border-radius: 8px;
-  filter: drop-shadow(0 22px 26px rgba(6, 4, 30, 0.45));
+  filter: drop-shadow(0 18px 20px rgba(0, 0, 0, 0.25));
   transition: filter 300ms;
 }
 .dimmed {
-  filter: grayscale(0.7) brightness(0.55) drop-shadow(0 12px 16px rgba(6, 4, 30, 0.3));
+  filter: grayscale(0.8) brightness(0.8) drop-shadow(0 10px 14px rgba(0, 0, 0, 0.15));
+  opacity: 0.6;
 }
 .quota {
   font-size: 22px;
-  font-weight: 700;
+  font-weight: 600;
 }
 .failure {
   display: grid;
   gap: 8px;
   justify-items: center;
-  padding: 18px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--bg-2) 70%, transparent);
+  padding: 8px 12px;
 }
 .failure p {
   color: var(--ink-dim);
@@ -61,21 +103,23 @@
 .row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--bg-2) 60%, transparent);
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow);
   color: var(--ink);
   text-decoration: none;
 }
 .hitRow {
   box-shadow:
     0 0 0 2px var(--gold),
+    var(--shadow),
     0 0 16px color-mix(in srgb, var(--gold) 60%, transparent);
 }
 .row:focus-visible {
-  outline: 3px solid var(--rose);
-  outline-offset: 2px;
+  outline: 4px solid var(--focus);
+  outline-offset: 3px;
 }
 .minis {
   display: flex;
@@ -85,9 +129,9 @@
 .minis img {
   width: 34px;
   aspect-ratio: 245 / 337;
-  border-radius: 3px;
+  border-radius: 4px;
   object-fit: cover;
-  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  background: var(--surface-2);
 }
 .rowText {
   display: grid;
@@ -100,7 +144,8 @@
   white-space: nowrap;
 }
 .packTitle {
-  font-size: 24px;
+  font-size: 22px;
+  font-weight: 600;
   margin-bottom: 14px;
   text-align: center;
 }
@@ -114,6 +159,10 @@
   position: relative;
   display: grid;
   gap: 4px;
+  padding: 10px 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow);
   text-align: center;
   font-size: 14px;
 }
@@ -122,7 +171,7 @@
   aspect-ratio: 245 / 337;
   border-radius: 8px;
   object-fit: cover;
-  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  background: var(--surface-2);
 }
 .hitCard img {
   box-shadow:
@@ -131,11 +180,11 @@
 }
 .badge {
   position: absolute;
-  top: 6px;
-  left: 6px;
-  padding: 2px 8px;
+  top: 16px;
+  left: 16px;
+  padding: 2px 10px;
   border-radius: 999px;
-  background: var(--rose);
+  background: #e60012;
   color: #fff;
   font-size: 12px;
   font-weight: 700;
