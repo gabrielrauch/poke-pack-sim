@@ -9,17 +9,14 @@ export function hintFor(state: State, revealed: number, total: number): string {
   if (state === 'pack' || state === 'tearing') return HINT_TEAR
   if (state === 'card') {
     return revealed >= total
-      ? 'Deslize para cima para terminar'
-      : 'Deslize para cima para a próxima'
+      ? 'Deslize para o lado para terminar'
+      : 'Deslize para o lado para a próxima'
   }
   return ''
 }
 
-/** §8.10: `translate(k*34px, |k|*9px) rotate(k*9deg)` com k = i - 2. */
-export function fanTransform(i: number, total = 5): string {
-  const k = i - Math.floor(total / 2)
-  return `translate(${k * 34}px, ${Math.abs(k) * 9}px) rotate(${k * 9}deg)`
-}
+/** Grade do resumo estilo TCG Pocket: 3 por linha; a última linha fica centralizada pelo CSS. */
+export const SUMMARY_COLUMNS = 3
 
 export function summaryTitle(cards: readonly PackCard[]): string {
   return cards.some((c) => isHit(c.tier)) ? 'Que puxada!' : 'Pacote aberto'

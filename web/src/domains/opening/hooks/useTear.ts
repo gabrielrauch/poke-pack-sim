@@ -2,12 +2,16 @@ import { useEffect, type RefObject } from 'react'
 import type { OpeningScene } from '../engine/OpeningScene'
 import { inTearZone, onPack, type Rect } from '../engine/tear'
 
-const SWIPE_UP = -45
 const TAP_MAX = 12
 const TAP_MS = 400
-const KEYS = new Set([' ', 'Enter', 'ArrowUp'])
+/** Dedo parado por mais que isto antes de soltar: velocidade zero (a carta volta se não passou do limite). */
+const STILL_MS = 100
+const KEYS = new Set([' ', 'Enter', 'ArrowUp', 'ArrowRight', 'ArrowLeft'])
 
-/** §8.4 e §8.6 sobre o retângulo projetado do pacote: corte pela tira, toque/deslize para virar, teclado no desktop. */
+/**
+ * §8.4 sobre o retângulo projetado do pacote (corte pela tira) e, depois, a pilha estilo TCG Pocket:
+ * a carta do topo segue o dedo e sai pelo lado; toque joga para a direita; setas/espaço no desktop.
+ */
 export function useTear(
   sceneRef: RefObject<OpeningScene | null>,
   containerRef: RefObject<HTMLElement | null>,
@@ -18,7 +22,9 @@ export function useTear(
     let rect: Rect | null = null
     let x0 = 0
     let tearing = false
-    let gesture: { x: number; y: number; t: number } | null = null
+    /** `v` é a velocidade em x (px/ms) suavizada; `px`/`pt` a última amostra. */
+    let gesture: { x: number; y: number; t: number; v: number; px: number; pt: number } | null =
+      null
 
     const packRect = (): Rect | null => {
       const r = sceneRef.current?.packRect()
@@ -45,11 +51,25 @@ export function useTear(
           if (onPack(r, e.clientX, e.clientY)) scene.setHeld(true)
           scene.nudge()
         }
-      } else if (scene.state === 'card') {
-        gesture = { x: e.clientX, y: e.clientY, t: performance.now() }
+      } else if (scene.state === 'card' && scene.dragStart()) {
+        const t = performance.now()
+        gesture = { x: e.clientX, y: e.clientY, t, v: 0, px: e.clientX, pt: t }
+        el.setPointerCapture(e.pointerId)
       }
     }
     const onMove = (e: PointerEvent) => {
+      if (gesture) {
+        const t = performance.now()
+        if (t > gesture.pt) {
+          const v = (e.clientX - gesture.px) / (t - gesture.pt)
+          gesture.v = gesture.v * 0.3 + v * 0.7
+        }
+        gesture.px = e.clientX
+        gesture.pt = t
+        sceneRef.current?.dragMove(e.clientX - gesture.x, e.clientY - gesture.y)
+        e.preventDefault()
+        return
+      }
       if (!tearing || !rect) return
       sceneRef.current?.tearMove(xFrac(e.clientX), e.clientX - x0, rect.width)
       e.preventDefault()
@@ -63,12 +83,15 @@ export function useTear(
         scene.tearEnd()
         return
       }
-      if (gesture && scene.state === 'card') {
+      if (gesture) {
+        const now = performance.now()
         const dx = e.clientX - gesture.x
         const dy = e.clientY - gesture.y
-        const dt = performance.now() - gesture.t
-        if (dy < SWIPE_UP || (Math.abs(dx) < TAP_MAX && Math.abs(dy) < TAP_MAX && dt < TAP_MS)) {
-          scene.next()
+        if (Math.abs(dx) < TAP_MAX && Math.abs(dy) < TAP_MAX && now - gesture.t < TAP_MS) {
+          scene.dragEnd(0, 0)
+          scene.next(1)
+        } else {
+          scene.dragEnd(dx, now - gesture.pt > STILL_MS ? 0 : gesture.v)
         }
       }
       gesture = null
@@ -80,6 +103,7 @@ export function useTear(
         tearing = false
         scene?.tearCancel()
       }
+      if (gesture) scene?.dragEnd(0, 0)
       gesture = null
     }
     const onKey = (e: KeyboardEvent) => {
@@ -90,7 +114,7 @@ export function useTear(
         scene.completeTear()
       } else if (scene.state === 'card') {
         e.preventDefault()
-        scene.next()
+        scene.next(e.key === 'ArrowLeft' ? -1 : 1)
       }
     }
 

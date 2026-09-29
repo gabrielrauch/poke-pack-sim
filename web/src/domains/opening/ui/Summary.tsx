@@ -1,10 +1,10 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react'
 import { cardImage, isHit } from '../../catalog/model'
 import type { PackCard } from '../../packs/model'
-import { fanTransform, summarySubtitle, summaryTitle } from '../model'
+import { SUMMARY_COLUMNS, summarySubtitle, summaryTitle } from '../model'
 import s from './opening.module.css'
 
-/** Resumo com leque (§8.10). `children` recebe controles extras (o /lab põe o seletor de tier). */
+/** Resumo em grade, como o TCG Pocket: as cartas entram uma a uma. `children` recebe controles extras (o /lab põe o seletor de tier). */
 export function Summary({
   cards,
   onAgain,
@@ -35,18 +35,12 @@ export function Summary({
       tabIndex={-1}
     >
       <div className={s.sumTitle}>{summaryTitle(cards)}</div>
-      <div className={s.fan}>
+      <div className={s.grid} style={{ '--cols': SUMMARY_COLUMNS } as CSSProperties}>
         {cards.map((card, i) => (
           <div
             key={card.n}
-            className={`${s.fanCard} ${isHit(card.tier) ? s.hit : ''}`}
-            style={
-              {
-                '--final': fanTransform(i, cards.length),
-                '--i': i,
-                zIndex: 10 + i,
-              } as CSSProperties
-            }
+            className={`${s.gridCard} ${isHit(card.tier) ? s.hit : ''}`}
+            style={{ '--i': i } as CSSProperties}
           >
             <img
               src={cardImage(card.img, 'low') ?? undefined}
