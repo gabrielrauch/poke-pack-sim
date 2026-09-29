@@ -80,7 +80,7 @@
   display: grid;
   justify-items: center;
   gap: 6px;
-  width: min(100%, 360px);
+  width: min(100%, 380px);
   padding: 18px;
   border-radius: 28px;
   color: var(--ink);
@@ -88,7 +88,18 @@
   box-shadow: var(--shadow-lift);
   text-align: center;
 }
-.sheet img {
+/* A carta ocupa 88% da altura do palco (≈ 83% da largura); a folga é para o giro e o brilho. */
+.stage {
+  display: grid;
+  place-items: center;
+  width: min(84vw, 340px, 45vh);
+  aspect-ratio: 1 / 1.32;
+  touch-action: none;
+}
+.stage .still {
+  width: 83%;
+}
+.still {
   width: min(72vw, 300px, 52vh);
   border-radius: 12px;
 }

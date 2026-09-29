@@ -1,12 +1,13 @@
 import { useEffect, type RefObject } from 'react'
-import type { OpeningScene } from '../engine/OpeningScene'
 import { tiltFromOrientation, tiltFromPointer } from '../engine/tilt'
 
 type OrientationCtor = { requestPermission?: () => Promise<string> }
+/** Quem recebe o alvo do tilt: a cena da abertura ou o visualizador do álbum. */
+export type TiltTarget = { setTiltTarget: (px: number, py: number) => void }
 
 /** §8.2: `deviceorientation` (permissão pedida no primeiro pointerup, iOS e Chrome) ou mouse relativo ao centro. */
 export function useTilt(
-  sceneRef: RefObject<OpeningScene | null>,
+  sceneRef: RefObject<TiltTarget | null>,
   containerRef: RefObject<HTMLElement | null>,
 ): void {
   useEffect(() => {

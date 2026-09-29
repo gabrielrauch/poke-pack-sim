@@ -1,6 +1,10 @@
+import { lazy, Suspense, useMemo } from 'react'
+import { hasWebGL2 } from '../../../shared/lib/webgl'
 import { cardImage, TIER_LABEL } from '../../catalog/model'
-import { countsText, firstPulledText, type AlbumCard, type Owned } from '../model'
+import { countsText, firstPulledText, viewerCard, type AlbumCard, type Owned } from '../model'
 import s from './collection.module.css'
+
+const CardViewerStage = lazy(() => import('../../opening/ui/CardViewerStage'))
 
 /** Carta em alta com as contagens (§7.1). Fecha por botão, fundo ou Escape. */
 export function CardSheet({
@@ -12,6 +16,16 @@ export function CardSheet({
   owned: Owned
   onClose: () => void
 }) {
+  const webgl = useMemo(hasWebGL2, [])
+  const viewed = useMemo(() => viewerCard(card, owned), [card, owned])
+  const still = (
+    <img
+      className={s.still}
+      src={cardImage(card.img, 'high') ?? undefined}
+      alt={card.name}
+      crossOrigin="anonymous"
+    />
+  )
   return (
     <div className={s.backdrop} onClick={onClose}>
       <div
@@ -26,11 +40,14 @@ export function CardSheet({
           if (e.key === 'Escape') onClose()
         }}
       >
-        <img
-          src={cardImage(card.img, 'high') ?? undefined}
-          alt={card.name}
-          crossOrigin="anonymous"
-        />
+        {/* Com WebGL2, o mesmo holo e tilt da abertura; sem, a imagem parada de sempre. */}
+        {webgl ? (
+          <Suspense fallback={<div className={s.stage}>{still}</div>}>
+            <CardViewerStage card={viewed} className={s.stage} />
+          </Suspense>
+        ) : (
+          still
+        )}
         <b>{card.name}</b>
         <span>
           #{card.n} · {TIER_LABEL[card.tier]}
