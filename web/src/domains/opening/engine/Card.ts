@@ -8,6 +8,7 @@ import {
   ShaderMaterial,
   type PlaneGeometry,
   type Texture,
+  Vector4,
 } from 'three'
 import { withAlpha } from '../../../shared/lib/theme'
 import type { PackCard } from '../../packs/model'
@@ -62,6 +63,7 @@ export class Card {
           uEdge: { value: new Color(...preset.edge) },
           uEdgeStrength: { value: preset.edgeStrength },
           uRadius: { value: CARD_RADIUS },
+          uArt: { value: new Vector4(...preset.art) },
         },
       }),
     )

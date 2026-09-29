@@ -28,3 +28,12 @@ it('tabela do §8.9', () => {
   })
   expect(holoPreset('ace_spec', false).mask).toBe(3)
 })
+
+it('ex usa a janela de arte larga; comum, rara e reverse usam a recuada', () => {
+  const inset = holoPreset('common', false).art
+  expect(holoPreset('rare', false).art).toEqual(inset)
+  expect(holoPreset('common', true).art).toEqual(inset)
+  const wide = holoPreset('double_rare', false).art
+  expect(wide[0]).toBeLessThan(inset[0])
+  expect(wide[2]).toBeGreaterThan(inset[2])
+})

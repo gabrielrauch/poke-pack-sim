@@ -8,13 +8,25 @@ export type HoloPreset = {
   sparkle: 0 | 1
   edge: [number, number, number]
   edgeStrength: number
+  /** Janela da arte em uv (x0, y0, x1, y1; y cresce para cima). */
+  art: [number, number, number, number]
 }
 
 const WHITE: [number, number, number] = [1, 1, 1]
 const GOLD_EDGE: [number, number, number] = [1, 0.886, 0.545]
 const GOLD_LINE: [number, number, number] = [1, 0.82, 0.35]
+// Layout Scarlet & Violet, medido na face real. Comum/rara: arte recuada, 8%–92% da largura e 10%–48%
+// da altura a partir do topo. ex (double_rare): a arte vai de borda interna a borda interna (4%–96%)
+// e começa logo abaixo da barra do nome (9%), com o "Evolui de…" por cima.
+const ART_INSET: HoloPreset['art'] = [0.08, 0.52, 0.92, 0.9]
+const ART_WIDE: HoloPreset['art'] = [0.04, 0.52, 0.96, 0.91]
 
 export function holoPreset(tier: Tier, reverse: boolean): HoloPreset {
+  const art = !reverse && tier === 'double_rare' ? ART_WIDE : ART_INSET
+  return { ...effect(tier, reverse), art }
+}
+
+function effect(tier: Tier, reverse: boolean): Omit<HoloPreset, 'art'> {
   if (reverse) return { mask: 1, foil: 0.6, gold: 0, sparkle: 0, edge: WHITE, edgeStrength: 0 }
   switch (tier) {
     case 'common':
@@ -59,14 +71,11 @@ uniform float uSparkle;
 uniform vec3 uEdge;
 uniform float uEdgeStrength;
 uniform float uRadius;
+uniform vec4 uArt;
 varying vec2 vUv;
 varying vec3 vLook;
 
 const float ASPECT = 1.4;
-// Retângulo da arte no layout Scarlet & Violet: 8%–92% da largura, 10%–48% da altura a partir do topo
-// (uv.y cresce para cima). Medido na face real; com 12%–55% a máscara pegava a faixa do "Nº 0007..."
-// e deixava de fora o topo da arte.
-const vec4 ART = vec4(0.08, 0.52, 0.92, 0.90);
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 vec3 rainbow(float t) { return 0.5 + 0.5 * cos(6.2831853 * (t + vec3(0.0, 0.33, 0.67))); }
@@ -86,7 +95,7 @@ float corners(vec2 uv) {
 void main() {
   vec4 base = texture2D(uMap, vUv);
   vec2 tilt = clamp(vLook.xy * 3.0, -1.0, 1.0);                       // tune: ganho do olhar
-  float inArt = inRect(vUv, ART);
+  float inArt = inRect(vUv, uArt);
   float m = uMask < 0.5 ? 0.0 : (uMask < 1.5 ? 1.0 - inArt : (uMask < 2.5 ? inArt : 1.0));
 
   // Faixa diagonal a 115° que desliza com o olhar (o background-position do .foil).
@@ -115,7 +124,7 @@ void main() {
   // Borda: aro da carta (inteira) ou filete ao redor da arte (double_rare).
   float rim = uMask > 2.5
     ? 1.0 - inRect(vUv, vec4(0.035, 0.025, 0.965, 0.975))
-    : (uMask > 1.5 ? inArt - inRect(vUv, ART + vec4(0.012, 0.0086, -0.012, -0.0086)) : 0.0);
+    : (uMask > 1.5 ? inArt - inRect(vUv, uArt + vec4(0.012, 0.0086, -0.012, -0.0086)) : 0.0);
   col = mix(col, uEdge, rim * uEdgeStrength);
 
   gl_FragColor = vec4(col, base.a * uOpacity * corners(vUv));
