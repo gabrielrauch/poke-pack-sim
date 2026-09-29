@@ -48,9 +48,13 @@ function effect(tier: Tier, reverse: boolean): Omit<HoloPreset, 'art'> {
 export const HOLO_VERTEX = /* glsl */ `
 varying vec2 vUv;
 varying vec3 vLook;
+varying vec3 vWorld;
+varying vec3 vNormal;
 void main() {
   vUv = uv;
   vec4 wp = modelMatrix * vec4(position, 1.0);
+  vWorld = wp.xyz;
+  vNormal = normalize(modelMatrix[2].xyz);
   vec3 v = normalize(cameraPosition - wp.xyz);
   vLook = vec3(
     dot(v, normalize(modelMatrix[0].xyz)),
@@ -72,8 +76,15 @@ uniform vec3 uEdge;
 uniform float uEdgeStrength;
 uniform float uRadius;
 uniform vec4 uArt;
+uniform vec3 uLight;
+uniform float uSheen;
+uniform float uShininess;
+uniform float uShade;
+uniform float uRim;
 varying vec2 vUv;
 varying vec3 vLook;
+varying vec3 vWorld;
+varying vec3 vNormal;
 
 const float ASPECT = 1.4;
 
@@ -127,6 +138,48 @@ void main() {
     : (uMask > 1.5 ? inArt - inRect(vUv, uArt + vec4(0.012, 0.0086, -0.012, -0.0086)) : 0.0);
   col = mix(col, uEdge, rim * uEdgeStrength);
 
+  // Luz da cena (fase 2): a carta escurece ao virar para longe da luz (normalizado para que de frente
+  // não mude nada), clareia de raspão (Fresnel) e um especular Blinn-Phong atravessa a face ao virar.
+  vec3 N = normalize(vNormal);
+  vec3 V = normalize(cameraPosition - vWorld);
+  float facing = clamp(dot(N, uLight) / max(uLight.z, 0.01), 0.0, 1.0);
+  col *= 1.0 - uShade * (1.0 - facing);
+  float fres = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 2.0);
+  col = mix(col, vec3(1.0), fres * uRim);
+  float spec = pow(max(dot(N, normalize(uLight + V)), 0.0), uShininess) * uSheen;
+  col = 1.0 - (1.0 - col) * (1.0 - vec3(spec));                        // screen
+
   gl_FragColor = vec4(col, base.a * uOpacity * corners(vUv));
+}
+`
+
+/** Borda da carta: o miolo de papelão com a mesma luz da face (difusa + especular), sem textura. */
+export const EDGE_VERTEX = /* glsl */ `
+varying vec3 vNormal;
+varying vec3 vView;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vNormal = normalize(normalMatrix * normal);
+  vView = -mv.xyz;
+  gl_Position = projectionMatrix * mv;
+}
+`
+
+export const EDGE_FRAGMENT = /* glsl */ `
+uniform vec3 uColor;
+uniform float uOpacity;
+uniform vec3 uLight;
+uniform float uSheen;
+uniform float uShininess;
+varying vec3 vNormal;
+varying vec3 vView;
+void main() {
+  // A câmera não gira: o espaço de câmera tem os eixos do mundo, onde está uLight.
+  vec3 n = normalize(vNormal);
+  vec3 v = normalize(vView);
+  float diff = max(dot(n, uLight), 0.0);
+  float spec = pow(max(dot(n, normalize(uLight + v)), 0.0), uShininess * 0.5) * uSheen * 2.0;
+  vec3 col = uColor * (0.55 + 0.45 * diff) + spec;
+  gl_FragColor = vec4(min(col, 1.0), uOpacity);
 }
 `

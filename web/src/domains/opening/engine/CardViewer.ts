@@ -11,9 +11,18 @@ import {
 import type { ThemeColors } from '../../../shared/lib/theme'
 import { cardImage, isHit } from '../../catalog/model'
 import type { PackCard } from '../../packs/model'
-import { Card, CARD_ASPECT, createCardAssets, LAYER, type CardAssets } from './Card'
+import {
+  Card,
+  CARD_ASPECT,
+  createCardAssets,
+  disposeCardAssets,
+  LAYER,
+  type CardAssets,
+  type FinishPatch,
+} from './Card'
+import { CARD_LOOK, SHADOW_LIFT, type CardLook } from './look'
 import { loadCardTextures } from './textures'
-import { createTilt, FOCUS_TILT_DEG, setTiltTarget, updateTilt } from './tilt'
+import { createTilt, setTiltTarget, updateTilt } from './tilt'
 
 /** Mesma perspectiva da abertura: 1 unidade = 1 px CSS em z=0. */
 const CAMERA_Z = 1000
@@ -25,6 +34,17 @@ const GLOW_OPACITY = 0.8
 const GLOW_FILL = 0.96
 /** Entrada: o olhar começa inclinado e volta ao centro, e o foil varre a carta uma vez. */
 const INTRO_TILT: [number, number] = [-0.9, 0.5]
+/** Giro automático da bancada: uma volta em oval a cada tantos ms. */
+const SPIN_MS = 5200
+/**
+ * A sombra e o brilho passam da borda do canvas; sem isto apareceria um corte reto na folha clara.
+ * A carta ocupa os 88% do meio, então esmaecer os 4% de cada lado não toca nela.
+ */
+const EDGE_FADE = (() => {
+  const x = 'linear-gradient(to right, transparent, #000 4%, #000 96%, transparent)'
+  const y = 'linear-gradient(to bottom, transparent, #000 4%, #000 96%, transparent)'
+  return `-webkit-mask-image:${x},${y};-webkit-mask-composite:source-in;mask-image:${x},${y};mask-composite:intersect`
+})()
 const rad = (deg: number) => (deg * Math.PI) / 180
 
 /**
@@ -42,6 +62,10 @@ export class CardViewer {
   private readonly tilt = createTilt()
   private readonly resizeObserver: ResizeObserver
   private card: Card | null = null
+  private look: CardLook = CARD_LOOK
+  private finish: FinishPatch = {}
+  private spinning = false
+  private lastFrame = -1
   private generation = 0
   private raf = 0
   private disposed = false
@@ -54,7 +78,7 @@ export class CardViewer {
     private readonly options: { reducedMotion?: boolean } = {},
   ) {
     this.canvas = document.createElement('canvas')
-    this.canvas.style.cssText = 'display:block;width:100%;height:100%'
+    this.canvas.style.cssText = `display:block;width:100%;height:100%;${EDGE_FADE}`
     container.appendChild(this.canvas)
     this.renderer = new WebGLRenderer({
       canvas: this.canvas,
@@ -86,7 +110,9 @@ export class CardViewer {
       return
     }
     this.clear()
-    const next = new Card(this.unitPlane, card, texture!, this.assets)
+    const next = new Card(this.unitPlane, card, texture!, this.assets, this.look)
+    next.setFinish(this.finish)
+    this.scene.add(next.shadow)
     next.setLayer('focus')
     // O grupo nasce de costas (verso para a câmera); meia volta mostra a face, como no fim do flip.
     next.group.rotation.y = Math.PI
@@ -111,7 +137,29 @@ export class CardViewer {
   }
 
   setTiltTarget(px: number, py: number): void {
+    if (this.spinning) return
     setTiltTarget(this.tilt, px, py)
+    this.invalidate()
+  }
+
+  /** Bancada: corpo e luz ao vivo (vale também para a próxima carta). */
+  setLook(look: CardLook): void {
+    this.look = look
+    this.card?.setLook(look)
+    this.invalidate()
+  }
+
+  /** Bancada: números do preset holo por cima do tier. `{}` volta ao preset. */
+  setFinish(patch: FinishPatch): void {
+    this.finish = patch
+    this.card?.setFinish(patch)
+    this.invalidate()
+  }
+
+  /** Bancada: a carta gira sozinha em oval (para ver o foil sem mexer o mouse ou o celular). */
+  setSpin(on: boolean): void {
+    this.spinning = on
+    if (!on) setTiltTarget(this.tilt, 0, 0)
     this.invalidate()
   }
 
@@ -121,9 +169,7 @@ export class CardViewer {
     if (this.raf) cancelAnimationFrame(this.raf)
     this.resizeObserver.disconnect()
     this.clear()
-    this.assets.back.dispose()
-    this.assets.badge.dispose()
-    this.assets.glow.dispose()
+    disposeCardAssets(this.assets)
     this.unitPlane.dispose()
     this.renderer.dispose()
     this.renderer.forceContextLoss()
@@ -163,13 +209,23 @@ export class CardViewer {
     this.raf = requestAnimationFrame(this.frame)
   }
 
-  private readonly frame = (): void => {
+  private readonly frame = (now: number): void => {
     this.raf = 0
     if (this.disposed) return
-    const moving = updateTilt(this.tilt)
-    this.tiltGroup.rotation.x = rad(FOCUS_TILT_DEG.x * this.tilt.y)
-    this.tiltGroup.rotation.y = rad(FOCUS_TILT_DEG.y * this.tilt.x)
+    const dt = this.lastFrame >= 0 ? now - this.lastFrame : 1000 / 60
+    if (this.spinning) {
+      const a = (now / SPIN_MS) * Math.PI * 2
+      setTiltTarget(this.tilt, Math.cos(a), Math.sin(a) * 0.7)
+    }
+    const moving = updateTilt(this.tilt, dt, this.look.spring) || this.spinning
+    this.tiltGroup.rotation.x = rad(this.look.tiltDeg.x * this.tilt.y)
+    this.tiltGroup.rotation.y = rad(this.look.tiltDeg.y * this.tilt.x)
+    if (this.card) {
+      this.scene.updateMatrixWorld()
+      this.card.syncShadow(this.scene, SHADOW_LIFT.focus)
+    }
     this.renderer.render(this.scene, this.camera)
+    this.lastFrame = moving ? now : -1
     if (moving) this.invalidate()
   }
 }

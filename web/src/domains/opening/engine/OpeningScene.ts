@@ -17,7 +17,8 @@ import type { PackCard } from '../../packs/model'
 
 export type { PackArt }
 import { Burst } from './Burst'
-import { Card, createCardAssets, type CardAssets } from './Card'
+import { Card, createCardAssets, disposeCardAssets, type CardAssets } from './Card'
+import { SHADOW_LIFT } from './look'
 import { Pack, PACK_ASPECT } from './Pack'
 import {
   BADGE_POP,
@@ -50,7 +51,7 @@ import {
 import { tearBegin, tearMove, tearRelease, type Tear } from './tear'
 import { TearLine } from './TearLine'
 import { canvasTexture, loadCardTextures, studioEnvironment } from './textures'
-import { createTilt, setTiltTarget, updateTilt } from './tilt'
+import { createTilt, FOCUS_TILT_DEG, PACK_TILT_DEG, setTiltTarget, updateTilt } from './tilt'
 import { Tweens, type Tween } from './tween'
 
 export type SceneColors = { bg: string; bg2: string; gold: string; rose: string; violet: string }
@@ -100,6 +101,8 @@ export class OpeningScene {
   private readonly stage = new Group()
   private readonly stack = new Group()
   private readonly focus = new Group()
+  /** Sombras de contato das cartas, na "mesa" atrás de pilha e foco (seguem o tremor do palco). */
+  private readonly shadows = new Group()
   private readonly dim: Mesh<PlaneGeometry, MeshBasicMaterial>
   private readonly unitPlane = new PlaneGeometry(1, 1)
   private readonly tweens = new Tweens()
@@ -215,7 +218,7 @@ export class OpeningScene {
     this.tearLine = new TearLine(this.unitPlane, colors.rose)
     this.stage.position.y = STAGE_Y
     this.stack.position.z = -10
-    this.stage.add(this.dim, this.burst.group, this.stack, this.focus)
+    this.stage.add(this.dim, this.shadows, this.burst.group, this.stack, this.focus)
     this.scene.add(this.stage)
 
     this.resizeObserver = new ResizeObserver(() => this.resize())
@@ -316,6 +319,7 @@ export class OpeningScene {
       // Como no TCG Pocket: a pilha sai do pacote de face; só as hits vêm de costas.
       if (this.plan[i]!.faceUp) card.group.rotation.y = Math.PI
       this.stack.add(card.group)
+      this.shadows.add(card.shadow)
       return card
     })
     this.stack.position.y = 0
@@ -536,9 +540,7 @@ export class OpeningScene {
     this.tearLine.dispose()
     this.burst.dispose()
     this.dim.material.dispose()
-    this.cardAssets.back.dispose()
-    this.cardAssets.badge.dispose()
-    this.cardAssets.glow.dispose()
+    disposeCardAssets(this.cardAssets)
     this.background.dispose()
     this.scene.environment?.dispose()
     this.unitPlane.dispose()
@@ -879,11 +881,24 @@ export class OpeningScene {
   private applyTilt(): void {
     const t = this.tilt
     if (this.pack) {
-      this.pack.tilt.rotation.x = rad(7 * t.y)
-      this.pack.tilt.rotation.y = rad(9 * t.x)
+      this.pack.tilt.rotation.x = rad(PACK_TILT_DEG.x * t.y)
+      this.pack.tilt.rotation.y = rad(PACK_TILT_DEG.y * t.x)
     }
-    this.focus.rotation.x = rad(11 * t.y)
-    this.focus.rotation.y = rad(13 * t.x)
+    this.focus.rotation.x = rad(FOCUS_TILT_DEG.x * t.y)
+    this.focus.rotation.y = rad(FOCUS_TILT_DEG.y * t.x)
+  }
+
+  /** Sombra das cartas em foco e só da carta do topo da pilha (as de baixo somariam uma mancha). */
+  private syncShadows(): void {
+    if (this.cards.length === 0) return
+    this.scene.updateMatrixWorld()
+    this.cards.forEach((card, i) => {
+      const parent = card.group.parent
+      if (parent === this.focus) card.syncShadow(this.stage, SHADOW_LIFT.focus)
+      else if (parent === this.stack && i === this.revealed) {
+        card.syncShadow(this.stage, SHADOW_LIFT.stack)
+      } else card.shadow.visible = false
+    })
   }
 
   private readonly frame = (now: number): void => {
@@ -899,8 +914,9 @@ export class OpeningScene {
     this.lastFrame = now
     this.now = now
     this.tweens.update(now)
-    const tilting = updateTilt(this.tilt)
+    const tilting = updateTilt(this.tilt, dt)
     this.applyTilt()
+    this.syncShadows()
     let idle = false
     if (this.pack?.root.visible) {
       const tearing = this.state === 'tearing'
