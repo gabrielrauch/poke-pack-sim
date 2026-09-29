@@ -8,6 +8,7 @@ import {
   ownedCount,
   progressText,
   tiersIn,
+  viewerCard,
 } from './model'
 
 const c = (n: string, tier: Card['tier']): Card => ({
@@ -47,5 +48,18 @@ describe('álbum (§7.1)', () => {
     expect(firstPulledText('2026-09-16T12:00:00.000Z', 'America/Sao_Paulo')).toBe(
       'Primeira em 16 de set. de 2026',
     )
+  })
+
+  it('visualizador: holo normal se tem uma normal, senão reverse', () => {
+    const [, second, third] = buildAlbum(cards, owned)
+    expect(viewerCard(third!, owned['025'])).toEqual({
+      n: '025',
+      name: '#025',
+      tier: 'common',
+      reverse: false,
+      img: null,
+      new: false,
+    })
+    expect(viewerCard(second!, owned['002']).reverse).toBe(true)
   })
 })

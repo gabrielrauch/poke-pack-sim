@@ -4,6 +4,8 @@ export type Tilt = { x: number; y: number; tx: number; ty: number }
 export const TILT_LERP = 0.1
 export const TILT_DIVISOR = 22
 export const TILT_BETA_REST = 45
+/** Giro máximo (graus) da carta em foco com o tilt em ±1: x vem de `ty`, y de `tx`. */
+export const FOCUS_TILT_DEG = { x: 11, y: 13 } as const
 const EPS = 1e-3
 
 const clamp = (v: number) => Math.max(-1, Math.min(1, v))

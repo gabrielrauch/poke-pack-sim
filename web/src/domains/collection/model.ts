@@ -1,4 +1,5 @@
 import { TIER_ORDER, type Card, type Tier } from '../catalog/model'
+import type { PackCard } from '../packs/model'
 
 /** `GET /api/collection/:set` (§5): contagens e data da primeira puxada por número. */
 export type Owned = { normal: number; reverse: number; first: string }
@@ -41,4 +42,16 @@ export function firstPulledText(iso: string, timeZone?: string): string {
   const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }
   if (timeZone) opts.timeZone = timeZone
   return `Primeira em ${new Intl.DateTimeFormat('pt-BR', opts).format(new Date(iso))}`
+}
+
+/** A carta como o visualizador 3D a recebe: holo normal se ela tem uma normal, senão o reverse. */
+export function viewerCard(card: AlbumCard, owned: Owned): PackCard {
+  return {
+    n: card.n,
+    name: card.name,
+    tier: card.tier,
+    reverse: owned.normal === 0 && owned.reverse > 0,
+    img: card.img,
+    new: false,
+  }
 }
