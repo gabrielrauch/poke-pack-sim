@@ -24,18 +24,24 @@ import {
   CHARGE,
   CHARGE_SHAKE,
   DIM,
-  DISCARD,
+  dragPose,
   FALL,
+  FLING,
+  flingDistance,
   FLIP_FACE_AT,
   flipFrames,
   NUDGE,
   OPENING,
   PACK_ENTER,
+  PROMOTE,
   RECOIL,
   revealPlan,
+  shakeFrames,
+  shakeStrength,
   STACK,
   stackPose,
   STRIP_JUMP,
+  swipeOutcome,
   transition,
   type Event,
   type Reveal,
@@ -45,14 +51,14 @@ import { tearBegin, tearMove, tearRelease, type Tear } from './tear'
 import { TearLine } from './TearLine'
 import { canvasTexture, loadCardTextures, studioEnvironment } from './textures'
 import { createTilt, setTiltTarget, updateTilt } from './tilt'
-import { Tweens } from './tween'
+import { Tweens, type Tween } from './tween'
 
 export type SceneColors = { bg: string; bg2: string; gold: string; rose: string; violet: string }
 export type SceneCallbacks = {
   onState?: (state: State) => void
   /** A face da carta `index` está visível (flip terminou). */
   onReveal?: (index: number) => void
-  /** A carta `index` foi descartada (vai para a bandeja). */
+  /** A carta `index` saiu pelo lado (vai para a bandeja). */
   onDismiss?: (index: number) => void
   onFinish?: () => void
   onNudge?: () => void
@@ -108,6 +114,10 @@ export class OpeningScene {
   private plan: Reveal[] = []
   private revealed = 0
   private tear: Tear | null = null
+  /** A carta do topo está presa ao dedo (`dragMove`). */
+  private dragging = false
+  /** Tweens da volta ao centro: cancelados se o dedo pega a carta de novo no meio do caminho. */
+  private snap: Tween[] = []
   private generation = 0
   /** `present()` em andamento; `load()` espera por ele antes de montar a pilha. */
   private presenting: Promise<void> = Promise.resolve()
@@ -231,6 +241,9 @@ export class OpeningScene {
     this.dim.visible = false
     this.dim.material.opacity = 0
     this.focus.rotation.set(0, 0, 0)
+    this.stage.position.set(0, STAGE_Y, 0)
+    this.dragging = false
+    this.snap = []
     this.stack.visible = false
     this.presenting = this.buildPack(art, gen).then(() => {
       if (gen !== this.generation || this.disposed || !this.pack) return
@@ -293,16 +306,18 @@ export class OpeningScene {
       return
     }
     this.clearCards()
+    this.plan = revealPlan(pack)
     this.cards = pack.map((c, i) => {
       const card = new Card(this.unitPlane, c, textures[i]!, this.cardAssets)
       card.layout(this.cardW)
       const pose = stackPose(i)
       card.group.position.set(0, pose.y, -i)
       card.group.rotation.z = rad(pose.rz)
+      // Como no TCG Pocket: a pilha sai do pacote de face; só as hits vêm de costas.
+      if (this.plan[i]!.faceUp) card.group.rotation.y = Math.PI
       this.stack.add(card.group)
       return card
     })
-    this.plan = revealPlan(pack)
     this.stack.position.y = 0
     this.stack.scale.setScalar(STACK.hiddenScale)
     for (const t of textures) this.renderer.initTexture(t)
@@ -413,28 +428,77 @@ export class OpeningScene {
     this.invalidate()
   }
 
-  /** Um swipe/toque = uma carta (§8.6). */
-  next(): void {
+  /** Dedo pegou a carta do topo (só com a face à mostra, estado `card`). */
+  dragStart(): boolean {
+    if (this.state !== 'card' || !this.cards[this.revealed]) return false
+    this.cancelSnap()
+    this.dragging = true
+    return true
+  }
+
+  /** `dx`/`dy` em px desde o toque: a carta segue o dedo e gira como uma carta deslizada na mesa. */
+  dragMove(dx: number, dy: number): void {
+    const card = this.cards[this.revealed]
+    if (!this.dragging || this.state !== 'card' || !card) return
+    const p = dragPose(dx, dy, this.cardW)
+    card.group.position.x = p.x
+    card.group.position.y = p.y
+    card.group.rotation.z = rad(p.rz)
+    card.group.rotation.y = Math.PI + rad(p.ry)
+    this.invalidate()
+  }
+
+  /** Soltou: longe ou rápido o bastante sai pelo lado; senão volta ao centro. `vx` em px/ms. */
+  dragEnd(dx: number, vx: number): void {
+    if (!this.dragging) return
+    this.dragging = false
+    const card = this.cards[this.revealed]
+    if (this.state !== 'card' || !card) return
+    const dir = swipeOutcome(dx, vx, this.cardW)
+    if (dir !== 0) {
+      this.next(dir)
+      return
+    }
+    const back = { duration: MS.snapBack, easing: EASE.settle }
+    this.snap = [
+      this.tweens.to(card.group.position, { x: 0, y: 0 }, back),
+      this.tweens.to(card.group.rotation, { y: Math.PI, z: 0 }, back),
+    ]
+    this.invalidate()
+  }
+
+  /** Uma carta sai pelo lado (swipe, toque ou teclado); a de baixo sobe antes de ela sumir. */
+  next(dir: -1 | 1 = 1): void {
     const card = this.cards[this.revealed]
     if (!card || !this.dispatch('next')) return
+    this.dragging = false
+    this.cancelSnap()
     const index = this.revealed
     this.revealed++
+    const last = this.revealed >= this.cards.length
     this.burst.raysOff(this.tweens)
     this.callbacks.onDismiss?.(index)
-    const opts = { duration: MS.discard, easing: EASE.discard }
-    this.tweens.to(card.group.position, { y: DISCARD.y * card.height }, opts)
-    this.tweens.to(card.group.scale, { x: DISCARD.scale, y: DISCARD.scale }, opts)
+    this.callbacks.vibrate?.(6)
+    const g = card.group
+    const opts = { duration: MS.fling, easing: EASE.fling }
+    this.tweens.to(
+      g.position,
+      { x: dir * flingDistance(this.w, this.cardW), y: g.position.y + card.height * 0.08 },
+      opts,
+    )
+    this.tweens.to(g.rotation, { z: -dir * rad(FLING.spin) }, opts)
     this.tweens.to(
       card.opacity,
       { value: 0 },
       {
         ...opts,
         onComplete: () => {
-          card.group.visible = false
-          this.revealNext()
+          g.visible = false
+          if (last) this.revealNext()
         },
       },
     )
+    if (!last) this.tweens.after(MS.fling * 0.4, () => this.revealNext())
     this.invalidate()
   }
 
@@ -563,8 +627,82 @@ export class OpeningScene {
       this.finish()
       return
     }
-    if (plan.suspense) this.suspense(card, plan.index, () => this.flip(card, plan))
+    if (plan.faceUp) this.promote(card, plan)
+    else if (plan.suspense) this.suspense(card, plan.index, () => this.flip(card, plan))
     else this.flip(card, plan)
+  }
+
+  /** Carta que já estava de face na pilha: sobe para o foco (onde segue o tilt) com um pop leve. */
+  private promote(card: Card, plan: Reveal): void {
+    const tw = this.tweens
+    const g = card.group
+    const { x, y } = g.position
+    this.focus.add(g)
+    card.setLayer('focus')
+    g.position.set(x, y + this.stack.position.y, 0)
+    g.rotation.y = Math.PI
+    const opts = { duration: MS.promote, easing: EASE.easeOut }
+    tw.to(g.position, { x: 0, y: 0 }, opts)
+    tw.to(g.rotation, { z: 0 }, opts)
+    tw.keyframes(
+      g.scale,
+      PROMOTE.map((k) => ({ at: k.at, to: { x: k.s, y: k.s } })),
+      {
+        ...opts,
+        onComplete: () => {
+          this.dispatch('revealed')
+          this.callbacks.onReveal?.(plan.index)
+        },
+      },
+    )
+    if (plan.buzz) {
+      // Rara comum: um brilho curto atrás da carta, sem burst.
+      const glow = card.glow
+      glow.visible = true
+      glow.scale.set(card.width * 1.5, card.width * 1.5, 1)
+      glow.material.opacity = 0
+      tw.keyframes(
+        glow.material,
+        [
+          { at: 0, to: { opacity: 0 } },
+          { at: 0.35, to: { opacity: 0.45 } },
+          { at: 1, to: { opacity: 0 } },
+        ],
+        {
+          duration: MS.promote * 2,
+          onComplete: () => {
+            glow.visible = false
+          },
+        },
+      )
+      this.callbacks.vibrate?.(8)
+    }
+    this.popBadge(card)
+    this.invalidate()
+  }
+
+  /** Tremida da tela inteira (o palco), amortecida; nada com reduced motion. */
+  private shake(amplitude: number): void {
+    if (this.reduced) return
+    this.tweens.keyframes(
+      this.stage.position,
+      shakeFrames(amplitude).map((k) => ({ at: k.at, to: { x: k.to.x, y: STAGE_Y + k.to.y } })),
+      { duration: MS.shake },
+    )
+  }
+
+  private cancelSnap(): void {
+    for (const t of this.snap) t.cancel()
+    this.snap = []
+  }
+
+  private popBadge(card: Card): void {
+    if (!card.badge) return
+    card.badgePivot.scale.set(0, 0, 1)
+    card.badgePivot.rotation.z = rad(BADGE_POP.rz)
+    const pop = { duration: MS.badge, easing: EASE.badge, delay: MS.badgeDelay }
+    this.tweens.to(card.badgePivot.scale, { x: 1, y: 1 }, pop)
+    this.tweens.to(card.badgePivot.rotation, { z: 0 }, pop)
   }
 
   /** §8.7: véu escuro, outros versos a 55%, o do topo carrega por 1,4 s; o flip vem 1450 ms depois. */
@@ -661,18 +799,13 @@ export class OpeningScene {
     tw.after(ms * FLIP_FACE_AT, () => {
       if (plan.hit) {
         this.burst.fire(card.card.tier, this.now, tw, this.reduced)
+        this.shake(shakeStrength(card.card.tier))
         this.callbacks.vibrate?.([20, 40, 70])
       } else if (plan.buzz) {
         this.callbacks.vibrate?.(8)
       }
     })
-    if (card.badge) {
-      card.badgePivot.scale.set(0, 0, 1)
-      card.badgePivot.rotation.z = rad(BADGE_POP.rz)
-      const pop = { duration: MS.badge, easing: EASE.badge, delay: MS.badgeDelay }
-      tw.to(card.badgePivot.scale, { x: 1, y: 1 }, pop)
-      tw.to(card.badgePivot.rotation, { z: 0 }, pop)
-    }
+    this.popBadge(card)
     this.invalidate()
   }
 

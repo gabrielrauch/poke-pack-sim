@@ -12,6 +12,8 @@ export const EASE = {
   bodyFall: [0.5, 0, 0.75, 0.3],
   stackSettle: [0.2, 1.25, 0.3, 1],
   discard: [0.4, 0, 0.8, 0.4],
+  /** Sai já rápido (herda o embalo do dedo) e desacelera fora da tela. */
+  fling: [0.25, 0.6, 0.4, 1],
   trayIn: [0.2, 1.4, 0.3, 1],
   badge: [0.2, 1.5, 0.3, 1],
   easeOut: [0.2, 0.8, 0.2, 1],
@@ -39,6 +41,10 @@ export const MS = {
   badge: 500,
   badgeDelay: 450,
   discard: 340,
+  fling: 380,
+  snapBack: 420,
+  promote: 360,
+  shake: 520,
   trayIn: 380,
   dim: 500,
   charge: 1400,
@@ -47,8 +53,6 @@ export const MS = {
   raysSpin: 16000,
   ring: 720,
   burstMax: 1400,
-  fan: 520,
-  fanStagger: 70,
   summaryFade: 350,
   packEnter: 520,
 } as const

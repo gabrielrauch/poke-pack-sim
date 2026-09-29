@@ -77,8 +77,6 @@ export const FLIP = [
 ] as const
 /** Momento em que a face aparece: burst do hit e vibração das raras. */
 export const FLIP_FACE_AT = 0.45
-/** Descarte: `translateY(-110%) scale(.7)`, opacity 0. */
-export const DISCARD = { y: 1.1, scale: 0.7 } as const
 /** Badge "Nova": scale(0) rotate(-10deg) → normal (rotate já invertido). */
 export const BADGE_POP = { rz: 10 } as const
 /** Tremida do suspense (§8.7), px em x, entre 30% e 80% da carga de 1,4 s. */
@@ -111,24 +109,94 @@ export function stackPose(k: number): { y: number; rz: number } {
 export type Reveal = {
   index: number
   hit: boolean
+  /** Estilo TCG Pocket: só os hits saem do pacote de costas; o resto já vem de face na pilha. */
+  faceUp: boolean
   suspense: boolean
   flipMs: number
   buzz: boolean
 }
 
-/** Um plano por carta: o slot raro é o último; suspense só quando a última é hit. */
+/** Um plano por carta: toda hit vem de costas, carrega (suspense) e vira; as outras só sobem da pilha. */
 export function revealPlan(cards: readonly PackCard[]): Reveal[] {
   return cards.map((card, index) => {
     const hit = isHit(card.tier)
-    const last = index === cards.length - 1
     return {
       index,
       hit,
-      suspense: last && hit,
+      faceUp: !hit,
+      suspense: hit,
       flipMs: hit ? MS.flipHit : MS.flip,
       buzz: !hit && card.tier !== 'common' && card.tier !== 'uncommon',
     }
   })
+}
+
+/* ---------- arrastar para o lado (estilo TCG Pocket) ---------- */
+
+/**
+ * Carta do topo segue o dedo: `x` 1:1, `y` amortecido, gira em z como quem desliza uma carta na mesa
+ * e inclina em y na direção do arrasto. Ângulos em graus; `y` já na convenção do Three (para cima).
+ */
+export const DRAG = { yDamp: 0.25, spin: 16, lean: 14 } as const
+/** Soltar além de 28% da largura, ou com mais de 0,55 px/ms, joga a carta para fora. */
+export const SWIPE = { threshold: 0.28, velocity: 0.55 } as const
+/** Saída: vai até fora da tela girando 28°; a próxima sobe com um pop de 4%. */
+export const FLING = { spin: 28, extra: 1.1 } as const
+export const PROMOTE = [
+  { at: 0, s: 1 },
+  { at: 0.55, s: 1.04 },
+  { at: 1, s: 1 },
+] as const
+
+const clampUnit = (v: number) => Math.max(-1.5, Math.min(1.5, v))
+
+export function dragPose(
+  dx: number,
+  dy: number,
+  cardW: number,
+): { x: number; y: number; rz: number; ry: number } {
+  const u = cardW > 0 ? clampUnit(dx / cardW) : 0
+  return { x: dx, y: -dy * DRAG.yDamp, rz: -u * DRAG.spin || 0, ry: u * DRAG.lean || 0 }
+}
+
+/** Para onde a carta vai ao soltar: -1 esquerda, 1 direita, 0 volta ao centro. `vx` em px/ms. */
+export function swipeOutcome(dx: number, vx: number, cardW: number): -1 | 0 | 1 {
+  if (Math.abs(vx) >= SWIPE.velocity && Math.sign(vx) === Math.sign(dx || vx)) {
+    return vx < 0 ? -1 : 1
+  }
+  if (Math.abs(dx) >= SWIPE.threshold * cardW) return dx < 0 ? -1 : 1
+  return 0
+}
+
+/** Distância em x para a carta sair inteira da tela, a partir do centro. */
+export function flingDistance(viewW: number, cardW: number): number {
+  return viewW / 2 + cardW * FLING.extra
+}
+
+/** Tremida da tela no momento em que a face de uma hit aparece: mais forte quanto mais rara (px). */
+export function shakeStrength(tier: string): number {
+  if (tier === 'hyper_rare') return 14
+  if (tier === 'special_illustration_rare') return 11
+  if (tier === 'ultra_rare' || tier === 'illustration_rare') return 8
+  return 5
+}
+
+/** Quadros da tremida (x, y) com amplitude `a`, amortecendo até parar. */
+export function shakeFrames(a: number): { at: number; to: { x: number; y: number } }[] {
+  const steps = [
+    [0, 0],
+    [1, -0.6],
+    [-0.9, 0.8],
+    [0.7, -0.4],
+    [-0.5, 0.5],
+    [0.3, -0.2],
+    [-0.15, 0.1],
+    [0, 0],
+  ] as const
+  return steps.map(([x, y], i) => ({
+    at: i / (steps.length - 1),
+    to: { x: x * a || 0, y: y * a || 0 },
+  }))
 }
 
 /** Os quadros do flip prontos para `Tweens.keyframes` (rotação em radianos). */

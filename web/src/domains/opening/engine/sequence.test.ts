@@ -2,12 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { MS } from '../../../shared/lib/motion'
 import type { PackCard } from '../../packs/model'
 import {
+  dragPose,
   FLIP,
+  flingDistance,
   flipFrames,
   OPENING,
   OPENING_END,
   revealPlan,
+  shakeFrames,
+  shakeStrength,
   stackPose,
+  swipeOutcome,
   transition,
 } from './sequence'
 
@@ -61,7 +66,7 @@ describe('stackPose', () => {
 })
 
 describe('revealPlan', () => {
-  it('só a última carta hit ganha suspense; hit vira mais devagar; rara vibra', () => {
+  it('só hits vêm de costas e carregam; hit vira mais devagar; rara vibra', () => {
     const plan = revealPlan([
       card('common'),
       card('rare'),
@@ -70,10 +75,58 @@ describe('revealPlan', () => {
       card('hyper_rare'),
     ])
     expect(plan.map((p) => p.hit)).toEqual([false, false, true, false, true])
-    expect(plan.map((p) => p.suspense)).toEqual([false, false, false, false, true])
+    expect(plan.map((p) => p.faceUp)).toEqual([true, true, false, true, false])
+    expect(plan.map((p) => p.suspense)).toEqual([false, false, true, false, true])
     expect(plan.map((p) => p.flipMs)).toEqual([MS.flip, MS.flip, MS.flipHit, MS.flip, MS.flipHit])
     expect(plan.map((p) => p.buzz)).toEqual([false, true, false, false, false])
     expect(plan.map((p) => p.index)).toEqual([0, 1, 2, 3, 4])
+  })
+})
+
+describe('arrastar para o lado', () => {
+  it('a carta segue o dedo em x, amortece y e gira contra o arrasto', () => {
+    const p = dragPose(100, 40, 200)
+    expect(p.x).toBe(100)
+    expect(p.y).toBe(-10)
+    expect(p.rz).toBeCloseTo(-8)
+    expect(p.ry).toBeCloseTo(7)
+    expect(dragPose(0, 0, 200)).toEqual({ x: 0, y: -0, rz: 0, ry: 0 })
+    expect(dragPose(10, 0, 0).rz).toBe(0)
+    // Giro limitado a 1,5 largura de carta.
+    expect(dragPose(10000, 0, 200).rz).toBeCloseTo(-24)
+  })
+
+  it('sai pelo lado passando de 28% da largura ou com peteleco; senão volta', () => {
+    expect(swipeOutcome(60, 0, 200)).toBe(1)
+    expect(swipeOutcome(-60, 0, 200)).toBe(-1)
+    expect(swipeOutcome(50, 0, 200)).toBe(0)
+    expect(swipeOutcome(20, 0.8, 200)).toBe(1)
+    expect(swipeOutcome(-20, -0.8, 200)).toBe(-1)
+    expect(swipeOutcome(0, -0.8, 200)).toBe(-1)
+    // Peteleco contra o arrasto não conta como velocidade; decide pela distância.
+    expect(swipeOutcome(80, -0.8, 200)).toBe(1)
+    expect(swipeOutcome(20, -0.8, 200)).toBe(0)
+  })
+
+  it('joga a carta inteira para fora da tela', () => {
+    expect(flingDistance(400, 200)).toBe(420)
+  })
+})
+
+describe('tremida das hits', () => {
+  it('mais forte quanto mais rara', () => {
+    expect(shakeStrength('hyper_rare')).toBeGreaterThan(shakeStrength('special_illustration_rare'))
+    expect(shakeStrength('special_illustration_rare')).toBeGreaterThan(shakeStrength('ultra_rare'))
+    expect(shakeStrength('illustration_rare')).toBe(shakeStrength('ultra_rare'))
+    expect(shakeStrength('ultra_rare')).toBeGreaterThan(shakeStrength('double_rare'))
+  })
+
+  it('começa e termina parada, com o pico no primeiro quadro', () => {
+    const f = shakeFrames(10)
+    expect(f[0]).toEqual({ at: 0, to: { x: 0, y: 0 } })
+    expect(f.at(-1)).toEqual({ at: 1, to: { x: 0, y: 0 } })
+    expect(f[1]!.to.x).toBe(10)
+    expect(Math.max(...f.map((k) => Math.abs(k.to.x)))).toBe(10)
   })
 })
 
