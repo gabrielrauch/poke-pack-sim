@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { expect, it } from 'vitest'
+import { SETS } from '../../catalog/model'
 import type { AlbumCard } from '../model'
 import { AlbumView } from './AlbumView'
 
@@ -27,6 +28,9 @@ it('mostra o set, o contador, a possuída como botão e a faltante em silhueta',
       selected={null}
       onSelect={() => {}}
       offline={false}
+      sets={SETS}
+      setId="sv03.5"
+      onSet={() => {}}
     />,
   )
   expect(html).toContain('151')
@@ -34,6 +38,8 @@ it('mostra o set, o contador, a possuída como botão e a faltante em silhueta',
   expect(html).toContain('/api/img/pt/sv/sv03.5/001/low.webp')
   expect(html).toContain('<button')
   expect(html).toContain('002 ainda não')
+  expect(html).toContain('aria-pressed="true">151</button>')
+  expect(html).toContain('Evoluções em Paldea')
 })
 
 it('offline sem dados explica', () => {
@@ -47,7 +53,11 @@ it('offline sem dados explica', () => {
       selected={null}
       onSelect={() => {}}
       offline
+      sets={[]}
+      setId="sv03.5"
+      onSet={() => {}}
     />,
   )
   expect(html).toContain('Sem conexão')
+  expect(html).not.toContain('aria-pressed')
 })

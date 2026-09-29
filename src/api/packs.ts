@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { ownedInSet } from '../db/owned'
 import { findPack, listPacks, openPackStatements, type PackRow, type StoredCard } from '../db/packs'
 import { favoritesOf, persistRefill, type UserRow } from '../db/users'
-import { buildPack, missingTiers, recipeForSet, seedFromBytes } from '../pack'
+import { buildPack, missingTiers, recipeForSet, seedFromBytes, setInfo } from '../pack'
 import { ALLOWANCE } from './allowance'
 import { requireUser } from './auth'
 import { SET_ID, type AppDeps, type AppEnv } from './env'
@@ -56,6 +56,8 @@ export function packRoutes({ provider, now = () => new Date() }: AppDeps) {
   app.post('/api/packs', requireUser, async (c) => {
     const body = parseBody(await c.req.json().catch(() => null))
     if (!body) return c.json({ error: 'BAD_REQUEST' }, 400)
+    // Só os sets liberados (src/pack/sets.ts); fora da lista nem chega a cobrar.
+    if (!setInfo(body.set_id)) return c.json({ error: 'NOT_FOUND' }, 404)
     const db = c.env.DB
     const at = now()
 

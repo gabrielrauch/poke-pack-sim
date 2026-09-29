@@ -1,10 +1,18 @@
 import recipe from '../../../../src/pack/recipes/sv.json'
+import { DEFAULT_SET_ID, SETS, setInfo, type SetInfo } from '../../../../src/pack/sets'
 import type { Card, SetCatalog, Tier } from '../../../../src/provider/types'
 
-export type { Card, SetCatalog, Tier }
+export type { Card, SetCatalog, SetInfo, Tier }
 
-/** Único set da v1 (§1.5); seletor de set é da etapa 7. */
-export const DEFAULT_SET = 'sv03.5'
+/** Sets do seletor; a mesma lista que o Worker aceita em `POST /api/packs`. */
+export { SETS }
+export const DEFAULT_SET = DEFAULT_SET_ID
+export const SET_KEY = 'pack-sim:set'
+
+/** Escolha salva que saiu da lista (ou nunca existiu) volta para o padrão. */
+export function resolveSet(raw: string | null): string {
+  return raw !== null && setInfo(raw) ? raw : DEFAULT_SET
+}
 
 /** Tiers que contam como "puxada grande" (§6, recipe `hit_tiers`). */
 export const HIT_TIERS: ReadonlySet<string> = new Set(recipe.hit_tiers)
