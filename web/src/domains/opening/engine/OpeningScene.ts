@@ -44,7 +44,7 @@ import {
 import { tearBegin, tearMove, tearRelease, type Tear } from './tear'
 import { TearLine } from './TearLine'
 import { canvasTexture, loadCardTextures, studioEnvironment } from './textures'
-import { createTilt, FOCUS_TILT_DEG, setTiltTarget, updateTilt } from './tilt'
+import { createTilt, setTiltTarget, updateTilt } from './tilt'
 import { Tweens } from './tween'
 
 export type SceneColors = { bg: string; bg2: string; gold: string; rose: string; violet: string }
@@ -749,8 +749,8 @@ export class OpeningScene {
       this.pack.tilt.rotation.x = rad(7 * t.y)
       this.pack.tilt.rotation.y = rad(9 * t.x)
     }
-    this.focus.rotation.x = rad(FOCUS_TILT_DEG.x * t.y)
-    this.focus.rotation.y = rad(FOCUS_TILT_DEG.y * t.x)
+    this.focus.rotation.x = rad(11 * t.y)
+    this.focus.rotation.y = rad(13 * t.x)
   }
 
   private readonly frame = (now: number): void => {
